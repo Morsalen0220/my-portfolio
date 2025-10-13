@@ -140,6 +140,20 @@ export const saveSection = async (sectionName) => {
 
 
 // Export necessary Firebase services and functions
+const contactMessagesCollectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'contact_messages');
+
+export const saveContactMessage = async (messageData) => {
+    try {
+        await addDoc(contactMessagesCollectionRef, {
+            ...messageData,
+            createdAt: serverTimestamp()
+        });
+    } catch (error) {
+        console.error("Error saving contact message:", error);
+        throw error; // Re-throw the error to be caught by the form handler
+    }
+};
+
 export { 
     auth, 
     db, 

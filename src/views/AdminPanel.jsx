@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { db, getSectionsQuery, saveSection, deletePortfolioItem, onSnapshot } from '../firebase/utils';
 
-const AdminPanel = ({ items, setView, setEditingItem }) => {
+// setView prop সরিয়ে দেওয়া হয়েছে
+const AdminPanel = ({ items, setEditingItem }) => {
     const [sections, setSections] = useState([]);
     const [newSectionName, setNewSectionName] = useState('');
     const [error, setError] = useState('');
+    const navigate = useNavigate();
 
     // Fetch sections from Firestore
     useEffect(() => {
@@ -37,6 +40,7 @@ const AdminPanel = ({ items, setView, setEditingItem }) => {
     };
 
     const handleDelete = async (id) => {
+        // window.confirm ব্যবহার না করে একটি কাস্টম মডাল ব্যবহার করা ভালো, তবে আপাতত এটি কাজ করবে
         if (window.confirm("Are you sure you want to delete this item?")) {
             try {
                 await deletePortfolioItem(id);
@@ -49,12 +53,12 @@ const AdminPanel = ({ items, setView, setEditingItem }) => {
 
     return (
         <div className="min-h-screen bg-gray-900 text-white p-4 sm:p-6 md:p-8">
-            <div className="max-w-7xl mx-auto">
+            <div className="max-w-7xl mx-auto pt-16 sm:pt-20"> {/* Added padding top */}
                 {/* Header */}
                 <div className="flex justify-between items-center mb-8">
                     <h1 className="text-3xl font-bold text-red-500">Admin Panel</h1>
                     <button
-                        onClick={() => setView('public')}
+                        onClick={() => navigate('/')}
                         className="px-4 py-2 bg-gray-600 rounded-lg hover:bg-gray-700 transition"
                     >
                         &larr; View Public Portfolio
@@ -96,7 +100,7 @@ const AdminPanel = ({ items, setView, setEditingItem }) => {
                     <div className="flex justify-between items-center mb-4">
                         <h2 className="text-2xl font-semibold">Portfolio Items</h2>
                         <button
-                            onClick={() => setEditingItem({})}
+                            onClick={() => setEditingItem({})} // এটি ক্লিক করলে ItemForm দেখাবে
                             className="px-6 py-2 bg-green-600 rounded-lg hover:bg-green-700 transition"
                         >
                             + Add New Video
@@ -108,11 +112,11 @@ const AdminPanel = ({ items, setView, setEditingItem }) => {
                             <div key={item.id} className="flex items-center justify-between bg-gray-700 p-4 rounded-lg">
                                 <div>
                                     <p className="font-bold text-lg">{item.title}</p>
-                                    <p className="text-sm text-gray-400">{item.description}</p>
+                                    <p className="text-sm text-gray-400">{item.client}</p>
                                 </div>
                                 <div className="flex space-x-2">
                                     <button
-                                        onClick={() => setEditingItem(item)}
+                                        onClick={() => setEditingItem(item)} // এটি ক্লিক করলে ItemForm দেখাবে
                                         className="px-3 py-1 bg-blue-600 rounded-md hover:bg-blue-700 transition text-sm"
                                     >
                                         Edit
@@ -134,4 +138,3 @@ const AdminPanel = ({ items, setView, setEditingItem }) => {
 };
 
 export default AdminPanel;
-
