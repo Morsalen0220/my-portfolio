@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react'; // <-- এই লাইনে useState যোগ করা হয়েছে
 import { useNavigate, Link } from 'react-router-dom';
 import AdminPanel from './AdminPanel';
 import ItemForm from '../components/ItemForm';
@@ -56,6 +56,13 @@ const AdminLogin = () => {
 
 // AdminNav Component: Navigation for the admin section.
 const AdminNav = () => {
+    const navigate = useNavigate();
+
+    const handleSignOut = async () => {
+        await signOutUser();
+        navigate('/admin'); // Redirect to login page after sign out
+    };
+    
     return (
         <nav className="fixed bottom-4 md:top-4 left-1/2 -translate-x-1/2 z-50">
             <div className="flex items-center gap-2 bg-black/30 backdrop-blur-lg border border-white/10 rounded-full p-2 shadow-2xl">
@@ -63,7 +70,7 @@ const AdminNav = () => {
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" /></svg>
                     <span className="hidden md:inline">Portfolio</span>
                 </Link>
-                <button onClick={signOutUser} className="flex items-center justify-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 bg-red-600/50 hover:bg-red-600/80 text-white">
+                <button onClick={handleSignOut} className="flex items-center justify-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 bg-red-600/50 hover:bg-red-600/80 text-white">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1zm10.293 9.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L14.586 9H7a1 1 0 100 2h7.586l-1.293 1.293z" clipRule="evenodd" /></svg>
                     <span className="hidden md:inline">Sign Out</span>
                 </button>
@@ -96,3 +103,4 @@ const AdminPage = ({ isAdmin, items, setEditingItem, editingItem }) => {
 };
 
 export default AdminPage;
+
