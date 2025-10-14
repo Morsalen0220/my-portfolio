@@ -1,43 +1,39 @@
 import React from 'react';
 
-const VideoEmbed = ({ item }) => {
-    const { videoUrl, type, title } = item || {};
-
-    if (!videoUrl || !videoUrl.includes('https://')) {
+const VideoEmbed = ({ url }) => {
+    if (!url) {
         return (
-            <div className="w-full h-full bg-black flex items-center justify-center">
-                <p className="text-red-400 text-xs p-2">Video URL error.</p>
+            <div className="w-full h-full bg-gray-800 flex items-center justify-center">
+                <p>No video URL provided.</p>
             </div>
         );
     }
 
     let embedUrl = '';
+    const isYouTube = url.includes('youtube.com') || url.includes('youtu.be');
+    const isVimeo = url.includes('vimeo.com');
 
-    if (type === 'youtube') {
-        let videoId = '';
-        try {
-            if (videoUrl.includes('youtu.be/')) {
-                videoId = videoUrl.split('youtu.be/')[1].split('?')[0];
-            } else if (videoUrl.includes('watch?v=')) {
-                videoId = videoUrl.split('watch?v=')[1].split('&')[0];
-            }
-            if (videoId) {
-                // Notun parameter 'modestbranding=1' jog kora hoyeche
-                embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=0&rel=0&modestbranding=1`;
-            }
-        } catch (e) {
-            console.error("Failed to parse YouTube URL:", e);
+    // ব্রাউজারে শব্দসহ অটোপ্লে ব্লক করা থাকে, তাই mute=1 যোগ করা হয়েছে
+    if (isYouTube) {
+        const videoIdMatch = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/ ]{11})/);
+        const videoId = videoIdMatch ? videoIdMatch[1] : null;
+        if (videoId) {
+            // ভিডিওটি ৩ সেকেন্ড থেকে অটোপ্লে করার জন্য প্যারামিটার যোগ করা হয়েছে
+            embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&start=3&mute=1`;
         }
-    } else if (type === 'drive') {
-        if (videoUrl.includes('/preview') || videoUrl.includes('/embed')) {
-            embedUrl = videoUrl;
+    } else if (isVimeo) {
+        const videoIdMatch = url.match(/vimeo\.com\/(?:video\/)?(\d+)/);
+        const videoId = videoIdMatch ? videoIdMatch[1] : null;
+        if (videoId) {
+            // ভিডিওটি ৩ সেকেন্ড থেকে অটোপ্লে করার জন্য প্যারামিটার যোগ করা হয়েছে
+            embedUrl = `https://player.vimeo.com/video/${videoId}?autoplay=1&muted=1#t=3s`;
         }
     }
 
     if (!embedUrl) {
         return (
-            <div className="w-full h-full bg-black flex items-center justify-center">
-                <p className="text-red-400 text-xs p-2">Could not generate embed link. Check URL format.</p>
+            <div className="w-full h-full bg-gray-800 flex items-center justify-center">
+                <p>Invalid video URL.</p>
             </div>
         );
     }
@@ -46,13 +42,12 @@ const VideoEmbed = ({ item }) => {
         <iframe
             className="w-full h-full"
             src={embedUrl}
-            title={title || 'Embedded Video'}
+            title="Video Player"
             frameBorder="0"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allow="autoplay; fullscreen; picture-in-picture"
             allowFullScreen
         ></iframe>
     );
 };
 
 export default VideoEmbed;
-

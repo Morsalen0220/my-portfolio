@@ -1,124 +1,139 @@
 import React, { useState, useEffect } from 'react';
 import { savePortfolioItem, getSectionsQuery, onSnapshot } from '../firebase/utils';
 
-const ItemForm = ({ initialData, setEditingItem }) => {
-    const [sections, setSections] = useState([]);
-    const initialFormState = {
+// --- এখানে `item = {}` যোগ করা হয়েছে ---
+const ItemForm = ({ item = {}, onSave, onCancel }) => {
+    const [formData, setFormData] = useState({
         title: '',
+        client: '',
         description: '',
         videoUrl: '',
-        type: 'youtube',
-        client: '',
-        duration: '',
+        thumbnailUrl: '',
         tools: '',
-        year: new Date().getFullYear().toString(),
-        sectionId: '', // Notun field
-    };
-
-    const [formData, setFormData] = useState(initialData.id ? initialData : initialFormState);
+        duration: '',
+        sectionId: '',
+    });
+    const [sections, setSections] = useState([]);
     const [error, setError] = useState('');
 
-    // Fetch sections for the dropdown
+    useEffect(() => {
+        // এখন item সবসময় একটি অবজেক্ট হবে, তাই আর if (item) দরকার নেই
+        setFormData({
+            id: item.id || null,
+            title: item.title || '',
+            client: item.client || '',
+            description: item.description || '',
+            videoUrl: item.videoUrl || '',
+            thumbnailUrl: item.thumbnailUrl || '',
+            tools: item.tools || '',
+            duration: item.duration || '',
+            sectionId: item.sectionId || '',
+        });
+    }, [item]);
+
     useEffect(() => {
         const q = getSectionsQuery();
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const fetchedSections = snapshot.docs.map(doc => ({
                 id: doc.id,
                 ...doc.data()
-            }));
+            })).sort((a, b) => a.createdAt?.seconds - b.createdAt?.seconds);
             setSections(fetchedSections);
-            // Set default section if creating a new item
-            if (!formData.id && fetchedSections.length > 0) {
+            // Set a default section if none is selected
+            if (!formData.sectionId && fetchedSections.length > 0) {
                 setFormData(prev => ({ ...prev, sectionId: fetchedSections[0].id }));
             }
         });
         return () => unsubscribe();
-    }, [formData.id]);
+    }, [formData.sectionId]);
 
 
     const handleChange = (e) => {
         const { name, value } = e.target;
-        setFormData({ ...formData, [name]: value });
+        setFormData(prev => ({ ...prev, [name]: value }));
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!formData.title || !formData.videoUrl || !formData.sectionId) {
-            setError('Title, Video URL, and Section are required.');
+        setError('');
+        if (!formData.title || !formData.videoUrl || !formData.sectionId || !formData.thumbnailUrl) {
+            setError('Title, Video URL, Thumbnail URL, and Section are required.');
             return;
         }
-
         try {
             await savePortfolioItem(formData);
-            setEditingItem(null); // Close the form
+            onSave();
         } catch (err) {
             setError('Failed to save item. Please try again.');
-            console.error("Failed to save item:", err);
+            console.error(err);
         }
     };
-    
+
     return (
-        <div className="min-h-screen bg-gray-900 text-white p-4 sm:p-6 md:p-8 flex items-center justify-center">
-            <div className="w-full max-w-2xl bg-gray-800 p-8 rounded-lg shadow-xl">
-                <h2 className="text-3xl font-bold mb-6 text-red-500">{formData.id ? 'Edit Video' : 'Add New Video'}</h2>
-                <form onSubmit={handleSubmit}>
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
+            <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+                <form onSubmit={handleSubmit} className="p-6 sm:p-8 space-y-6">
+                    <h2 className="text-2xl font-bold text-red-500">{item.id ? 'Edit Video Item' : 'Add New Video Item'}</h2>
+                    
+                    {error && <p className="text-red-400 text-sm bg-red-900/50 p-3 rounded-md">{error}</p>}
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {/* Title */}
-                        <div className="md:col-span-2">
-                            <label className="block text-gray-400 mb-2">Title</label>
-                            <input type="text" name="title" value={formData.title} onChange={handleChange} className="w-full bg-gray-700 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-red-500" required />
+                        <div>
+                            <label htmlFor="title" className="block text-sm font-medium text-gray-300 mb-1">Title</label>
+                            <input type="text" name="title" id="title" value={formData.title} onChange={handleChange} className="w-full bg-gray-700 text-white rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
                         </div>
 
-                        {/* Video URL */}
-                        <div className="md:col-span-2">
-                            <label className="block text-gray-400 mb-2">Video URL</label>
-                            <input type="url" name="videoUrl" value={formData.videoUrl} onChange={handleChange} className="w-full bg-gray-700 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-red-500" required />
-                        </div>
-
-                        {/* Type */}
+                        {/* Client */}
                         <div>
-                            <label className="block text-gray-400 mb-2">Type</label>
-                            <select name="type" value={formData.type} onChange={handleChange} className="w-full bg-gray-700 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-red-500">
-                                <option value="youtube">YouTube</option>
-                                <option value="drive">Google Drive</option>
-                            </select>
-                        </div>
-                        
-                        {/* Section Dropdown - Notun */}
-                        <div>
-                            <label className="block text-gray-400 mb-2">Section</label>
-                            <select name="sectionId" value={formData.sectionId} onChange={handleChange} className="w-full bg-gray-700 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-red-500" required>
-                                <option value="" disabled>Select a section</option>
-                                {sections.map(section => (
-                                    <option key={section.id} value={section.id}>{section.name}</option>
-                                ))}
-                            </select>
-                        </div>
-
-                        {/* Other Fields */}
-                        <div>
-                            <label className="block text-gray-400 mb-2">Client</label>
-                            <input type="text" name="client" value={formData.client} onChange={handleChange} className="w-full bg-gray-700 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-red-500" />
-                        </div>
-                        <div>
-                            <label className="block text-gray-400 mb-2">Duration</label>
-                            <input type="text" name="duration" value={formData.duration} onChange={handleChange} className="w-full bg-gray-700 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-red-500" />
-                        </div>
-                        <div>
-                            <label className="block text-gray-400 mb-2">Tools</label>
-                            <input type="text" name="tools" value={formData.tools} onChange={handleChange} className="w-full bg-gray-700 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-red-500" />
-                        </div>
-                        <div>
-                            <label className="block text-gray-400 mb-2">Year</label>
-                            <input type="text" name="year" value={formData.year} onChange={handleChange} className="w-full bg-gray-700 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-red-500" />
+                            <label htmlFor="client" className="block text-sm font-medium text-gray-300 mb-1">Client</label>
+                            <input type="text" name="client" id="client" value={formData.client} onChange={handleChange} className="w-full bg-gray-700 text-white rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
                         </div>
                     </div>
 
-                    {error && <p className="text-red-400 mt-4">{error}</p>}
+                    {/* Description */}
+                    <div>
+                        <label htmlFor="description" className="block text-sm font-medium text-gray-300 mb-1">Description</label>
+                        <textarea name="description" id="description" value={formData.description} onChange={handleChange} rows="3" className="w-full bg-gray-700 text-white rounded-md px-4 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-red-500"></textarea>
+                    </div>
 
-                    <div className="flex justify-end gap-4 mt-8">
-                        <button type="button" onClick={() => setEditingItem(null)} className="px-6 py-2 bg-gray-600 rounded-lg hover:bg-gray-700 transition">Cancel</button>
-                        <button type="submit" className="px-6 py-2 bg-red-600 rounded-lg hover:bg-red-700 transition">{formData.id ? 'Save Changes' : 'Add Video'}</button>
+                     {/* Thumbnail URL */}
+                    <div>
+                        <label htmlFor="thumbnailUrl" className="block text-sm font-medium text-gray-300 mb-1">Thumbnail URL</label>
+                        <input type="text" name="thumbnailUrl" id="thumbnailUrl" value={formData.thumbnailUrl} onChange={handleChange} placeholder="https://example.com/image.jpg" className="w-full bg-gray-700 text-white rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
+                    </div>
+
+                    {/* Video URL */}
+                    <div>
+                        <label htmlFor="videoUrl" className="block text-sm font-medium text-gray-300 mb-1">Video URL (Vimeo or YouTube)</label>
+                        <input type="text" name="videoUrl" id="videoUrl" value={formData.videoUrl} onChange={handleChange} className="w-full bg-gray-700 text-white rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {/* Section */}
+                        <div>
+                             <label htmlFor="sectionId" className="block text-sm font-medium text-gray-300 mb-1">Section</label>
+                             <select name="sectionId" id="sectionId" value={formData.sectionId} onChange={handleChange} className="w-full bg-gray-700 text-white rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
+                                <option value="" disabled>Select a section</option>
+                                {sections.map(sec => <option key={sec.id} value={sec.id}>{sec.name}</option>)}
+                             </select>
+                        </div>
+                         {/* Tools */}
+                        <div>
+                             <label htmlFor="tools" className="block text-sm font-medium text-gray-300 mb-1">Tools (comma-separated)</label>
+                             <input type="text" name="tools" id="tools" value={formData.tools} onChange={handleChange} className="w-full bg-gray-700 text-white rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
+                        </div>
+                         {/* Duration */}
+                        <div>
+                             <label htmlFor="duration" className="block text-sm font-medium text-gray-300 mb-1">Duration (e.g., 2:30)</label>
+                             <input type="text" name="duration" id="duration" value={formData.duration} onChange={handleChange} className="w-full bg-gray-700 text-white rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
+                        </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex justify-end gap-4 pt-4">
+                        <button type="button" onClick={onCancel} className="px-6 py-2 bg-gray-600 rounded-lg hover:bg-gray-500 transition">Cancel</button>
+                        <button type="submit" className="px-6 py-2 bg-red-600 rounded-lg hover:bg-red-700 transition">Save Item</button>
                     </div>
                 </form>
             </div>
@@ -127,4 +142,3 @@ const ItemForm = ({ initialData, setEditingItem }) => {
 };
 
 export default ItemForm;
-

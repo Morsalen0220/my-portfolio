@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from "framer-motion";
+import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence, useInView, useMotionValue, useTransform, animate } from 'framer-motion';
 import VideoPlayerModal from '../components/VideoPlayerModal';
 import { getSectionsQuery, onSnapshot, getSiteSettings, getCollectionQuery } from '../firebase/utils';
 
@@ -20,6 +20,50 @@ const DynamicIcon = ({ name, className }) => {
     const IconComponent = iconComponents[name];
     return IconComponent ? <IconComponent className={className} /> : null;
 };
+
+// --- নতুন ডিজাইন করা AnimatedCounter কম্পোনেন্ট ---
+const AnimatedCounter = ({ value, label, icon }) => {
+    const ref = useRef(null);
+    const isInView = useInView(ref, { once: true, margin: "-100px" });
+
+    const numericValue = parseInt(String(value).replace(/\D/g, ''), 10) || 0;
+    const suffix = String(value).replace(/[0-9]/g, '');
+
+    const count = useMotionValue(0);
+    const rounded = useTransform(count, (latest) => Math.round(latest));
+
+    useEffect(() => {
+        if (isInView) {
+            const animation = animate(count, numericValue, {
+                duration: 2,
+                ease: "easeOut",
+            });
+            return () => animation.stop();
+        }
+    }, [isInView, count, numericValue]);
+
+    return (
+        <motion.div 
+            ref={ref} 
+            className="text-center space-y-3 flex flex-col items-center"
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-100px" }}
+            transition={{ duration: 0.5 }}
+        >
+            <div className="p-4 bg-violet-900/40 rounded-full border border-violet-500/30">
+                <DynamicIcon name={icon} className="w-8 h-8 text-violet-400" />
+            </div>
+            <div className="text-4xl md:text-5xl font-bold text-white">
+                <motion.span>{rounded}</motion.span>
+                {suffix}
+            </div>
+            <p className="text-sm text-gray-400 uppercase tracking-wider">{label}</p>
+            <div className="w-20 h-0.5 bg-gradient-to-r from-transparent via-violet-500 to-transparent"></div>
+        </motion.div>
+    );
+};
+
 
 const Card = ({ children, className, ...props }) => ( <div className={`overflow-hidden bg-gray-800/50 border-gray-700 hover:border-violet-500 transition-all duration-500 cursor-pointer animate-fade-in-up hover:shadow-2xl hover:shadow-violet-500/10 rounded-lg ${className}`} {...props}> {children} </div> );
 const Button = ({ children, variant, size, className, ...props }) => {
@@ -96,11 +140,12 @@ const ContactFormModal = ({ isOpen, onClose }) => {
 };
 
 
+// --- PublicPortfolio মূল কম্পোনেন্ট ---
 const PublicPortfolio = ({ items }) => {
     const [sections, setSections] = useState([]);
     const [activeSection, setActiveSection] = useState('hero');
     const [selectedVideo, setSelectedVideo] = useState(null);
-    const [activeFilter, setActiveFilter] = useState('all'); // <-- ডিফল্ট মান 'all'
+    const [activeFilter, setActiveFilter] = useState('all');
     const [isContactFormOpen, setContactFormOpen] = useState(false);
 
     const [siteSettings, setSiteSettings] = useState({});
@@ -144,12 +189,6 @@ const PublicPortfolio = ({ items }) => {
         const unsubscribeSections = onSnapshot(q, (snapshot) => {
             const fetchedSections = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).sort((a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0));
             setSections(fetchedSections);
-            
-            // --- এই অংশটি পরিবর্তন করা হয়েছে ---
-            // এখানে আর activeFilter পরিবর্তন করা হচ্ছে না
-            // if (fetchedSections.length > 0 && activeFilter === 'all') {
-            //     setActiveFilter(fetchedSections[0].id);
-            // }
         });
 
         return () => {
@@ -159,7 +198,7 @@ const PublicPortfolio = ({ items }) => {
             unsubscribeServiceList();
             unsubscribeSections();
         };
-    }, []); // <-- এখানে আর activeFilter dependency হিসেবে নেই
+    }, []);
 
     const filteredItems = activeFilter === 'all' ? items : items.filter(item => item.sectionId === activeFilter);
 
@@ -225,8 +264,19 @@ const PublicPortfolio = ({ items }) => {
                     </div>
                 </section>
 
-                <section className="py-12 px-6 bg-gray-800/50 backdrop-blur-sm border-y border-gray-700">
-                    <div className="max-w-7xl mx-auto"><div className="grid grid-cols-2 md:grid-cols-2 gap-8">{stats.map((stat, index) => ( <div key={index} className="text-center space-y-2 animate-fade-in-up" style={{ animationDelay: `${index * 0.1}s` }}> <DynamicIcon name={stat.icon} className="w-8 h-8 mx-auto text-violet-400 mb-2" /> <div className="text-3xl md:text-4xl font-bold text-violet-400">{stat.value}</div> <div className="text-sm text-gray-400 uppercase tracking-wider">{stat.label}</div> </div> ))}</div></div>
+                <section className="py-16 px-6 bg-gray-900 border-y border-gray-800">
+                    <div className="max-w-7xl mx-auto">
+                        <div className="flex flex-row flex-wrap items-start justify-center gap-12 md:gap-16">
+                            {stats.map((stat, index) => (
+                                <AnimatedCounter
+                                    key={index}
+                                    value={stat.value}
+                                    label={stat.label}
+                                    icon={stat.icon}
+                                />
+                            ))}
+                        </div>
+                    </div>
                 </section>
 
                 <section id="work" className="py-20 px-6">
@@ -240,8 +290,19 @@ const PublicPortfolio = ({ items }) => {
                             {filteredItems.map((item, index) => (
                                 <Card key={item.id} onClick={() => setSelectedVideo(item)} style={{ animationDelay: `${index * 0.1}s` }}>
                                     <div className="relative aspect-video overflow-hidden">
-                                        <div className="w-full h-full bg-black flex items-center justify-center font-mono text-gray-500">{item.title}</div>
-                                        <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex flex-col justify-end p-6"><div className="flex items-center gap-2 text-white"><div className="w-12 h-12 rounded-full bg-violet-600/90 flex items-center justify-center backdrop-blur-sm"><DynamicIcon name="PlayIcon" className="ml-0.5" /></div><span className="font-mono text-sm">{item.duration || '0:00'}</span></div></div>
+                                        {item.thumbnailUrl ? (
+                                            <img src={item.thumbnailUrl} alt={item.title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                                        ) : (
+                                            <div className="w-full h-full bg-black flex items-center justify-center font-mono text-gray-500">{item.title}</div>
+                                        )}
+                                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex flex-col justify-end p-6">
+                                            <div className="flex items-center gap-2 text-white">
+                                                <div className="w-12 h-12 rounded-full bg-violet-600/90 flex items-center justify-center backdrop-blur-sm">
+                                                    <DynamicIcon name="PlayIcon" className="ml-0.5" />
+                                                </div>
+                                                <span className="font-mono text-sm">{item.duration || '0:00'}</span>
+                                            </div>
+                                        </div>
                                     </div>
                                     <div className="p-6 space-y-3">
                                         <h4 className="text-xl font-bold group-hover:text-violet-400 transition-colors">{item.title}</h4>
