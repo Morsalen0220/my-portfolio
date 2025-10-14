@@ -100,7 +100,7 @@ const PublicPortfolio = ({ items }) => {
     const [sections, setSections] = useState([]);
     const [activeSection, setActiveSection] = useState('hero');
     const [selectedVideo, setSelectedVideo] = useState(null);
-    const [activeFilter, setActiveFilter] = useState('all');
+    const [activeFilter, setActiveFilter] = useState('all'); // <-- ডিফল্ট মান 'all'
     const [isContactFormOpen, setContactFormOpen] = useState(false);
 
     const [siteSettings, setSiteSettings] = useState({});
@@ -144,9 +144,12 @@ const PublicPortfolio = ({ items }) => {
         const unsubscribeSections = onSnapshot(q, (snapshot) => {
             const fetchedSections = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).sort((a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0));
             setSections(fetchedSections);
-            if (fetchedSections.length > 0 && activeFilter === 'all') {
-                setActiveFilter(fetchedSections[0].id);
-            }
+            
+            // --- এই অংশটি পরিবর্তন করা হয়েছে ---
+            // এখানে আর activeFilter পরিবর্তন করা হচ্ছে না
+            // if (fetchedSections.length > 0 && activeFilter === 'all') {
+            //     setActiveFilter(fetchedSections[0].id);
+            // }
         });
 
         return () => {
@@ -156,7 +159,7 @@ const PublicPortfolio = ({ items }) => {
             unsubscribeServiceList();
             unsubscribeSections();
         };
-    }, []);
+    }, []); // <-- এখানে আর activeFilter dependency হিসেবে নেই
 
     const filteredItems = activeFilter === 'all' ? items : items.filter(item => item.sectionId === activeFilter);
 
