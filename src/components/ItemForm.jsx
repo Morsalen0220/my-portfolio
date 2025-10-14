@@ -93,8 +93,14 @@ const ItemForm = ({ item = {}, onSave = () => {}, onCancel }) => {
     };
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
-            <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        // FIX: Added onClick={onCancel} to the overlay to close the modal when clicking outside,
+        // which helps resolve navigation/click blocking issue if the form is accidentally left open.
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4" onClick={onCancel}>
+            <div 
+                className="bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+                // Prevent modal closure when clicking inside the form content
+                onClick={(e) => e.stopPropagation()} 
+            >
                 <form onSubmit={handleSubmit} className="p-6 sm:p-8 space-y-6">
                     <h2 className="text-2xl font-bold text-red-500">{item.id ? 'Edit Video Item' : 'Add New Video Item'}</h2>
                     
@@ -139,7 +145,8 @@ const ItemForm = ({ item = {}, onSave = () => {}, onCancel }) => {
                              <label htmlFor="sectionId" className="block text-sm font-medium text-gray-300 mb-1">Section *</label>
                              <select name="sectionId" id="sectionId" value={formData.sectionId} onChange={handleChange} className="w-full bg-gray-700 text-white rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
                                 <option value="" disabled>Select a section</option>
-                                {sections.map(sec => <option key={sec.id} value={sec.id}>{sec.name}</option>)}
+                                {/* FIX: Added index as fallback key */}
+                                {sections.map((sec, index) => <option key={sec.id || index} value={sec.id}>{sec.name}</option>)}
                              </select>
                         </div>
                          {/* Tools */}
