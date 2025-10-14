@@ -138,8 +138,8 @@ const CollectionManager = ({ title, collectionName, fields, itemDisplayName }) =
             )}
 
             <div className="space-y-3">
-                {items.map((item) => (
-                    <div key={item.id} className="flex items-center justify-between bg-gray-700 p-4 rounded-lg">
+                {items.map((item, index) => (
+                    <div key={item.id || `item-${index}`} className="flex items-center justify-between bg-gray-700 p-4 rounded-lg">
                         <div>
                             <p className="font-bold text-lg">{item[itemDisplayName]}</p>
                             {Object.keys(item)
@@ -330,8 +330,8 @@ const AdminPanel = ({ items, setEditingItem }) => {
                         </button>
                     </div>
                     <div className="space-y-4">
-                        {items.map((item) => (
-                            <div key={item.id} className="flex items-center justify-between bg-gray-700 p-4 rounded-lg">
+                        {items.map((item, index) => (
+                            <div key={item.id || `portfolio-${index}`} className="flex items-center justify-between bg-gray-700 p-4 rounded-lg">
                                 <div>
                                     <p className="font-bold text-lg">{item.title}</p>
                                     <p className="text-sm text-gray-400">{item.client}</p>

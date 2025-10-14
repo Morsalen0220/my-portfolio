@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { savePortfolioItem, getSectionsQuery, onSnapshot } from '../firebase/utils';
 
-// --- এখানে `item = {}` যোগ করা হয়েছে ---
-const ItemForm = ({ item = {}, onSave, onCancel }) => {
+// --- এখানে `onSave = () => {}` যোগ করা হয়েছে ---
+const ItemForm = ({ item = {}, onSave = () => {}, onCancel }) => {
     const [formData, setFormData] = useState({
         title: '',
         client: '',
@@ -16,21 +16,7 @@ const ItemForm = ({ item = {}, onSave, onCancel }) => {
     const [sections, setSections] = useState([]);
     const [error, setError] = useState('');
 
-    useEffect(() => {
-        // এখন item সবসময় একটি অবজেক্ট হবে, তাই আর if (item) দরকার নেই
-        setFormData({
-            id: item.id || null,
-            title: item.title || '',
-            client: item.client || '',
-            description: item.description || '',
-            videoUrl: item.videoUrl || '',
-            thumbnailUrl: item.thumbnailUrl || '',
-            tools: item.tools || '',
-            duration: item.duration || '',
-            sectionId: item.sectionId || '',
-        });
-    }, [item]);
-
+    // 1. Sections fetch করা (component mount-এর সময় একবার)
     useEffect(() => {
         const q = getSectionsQuery();
         const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -39,13 +25,49 @@ const ItemForm = ({ item = {}, onSave, onCancel }) => {
                 ...doc.data()
             })).sort((a, b) => a.createdAt?.seconds - b.createdAt?.seconds);
             setSections(fetchedSections);
-            // Set a default section if none is selected
-            if (!formData.sectionId && fetchedSections.length > 0) {
-                setFormData(prev => ({ ...prev, sectionId: fetchedSections[0].id }));
-            }
         });
         return () => unsubscribe();
-    }, [formData.sectionId]);
+    }, []); 
+
+    // *** Item Prop Initialization and Default Section Setting. ***
+    useEffect(() => {
+        const isNewItem = !item.id;
+        let newSectionId = item.sectionId || '';
+
+        // If it's a new item AND sections are loaded, set the default section ID.
+        if (isNewItem && sections.length > 0 && !newSectionId) {
+            newSectionId = sections[0].id;
+        }
+
+        // Object creation to compare state without relying on prop reference
+        const initialFormData = {
+            id: item.id || null,
+            title: item.title || '',
+            client: item.client || '',
+            description: item.description || '',
+            videoUrl: item.videoUrl || '',
+            thumbnailUrl: item.thumbnailUrl || '',
+            tools: item.tools || '',
+            duration: item.duration || '',
+            sectionId: newSectionId,
+        };
+
+        setFormData(prevFormData => {
+            
+            const shouldUpdate = 
+                prevFormData.id !== initialFormData.id ||
+                prevFormData.sectionId !== initialFormData.sectionId ||
+                prevFormData.title !== initialFormData.title;
+                
+
+            if (shouldUpdate) {
+                return initialFormData;
+            }
+            
+            return prevFormData; 
+        });
+        
+    }, [item.id, item.sectionId, item.title, sections.length]); 
 
 
     const handleChange = (e) => {
@@ -56,8 +78,9 @@ const ItemForm = ({ item = {}, onSave, onCancel }) => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
-        if (!formData.title || !formData.videoUrl || !formData.sectionId || !formData.thumbnailUrl) {
-            setError('Title, Video URL, Thumbnail URL, and Section are required.');
+        // Thumbnail URL validation removed in previous step.
+        if (!formData.title || !formData.videoUrl || !formData.sectionId) {
+            setError('Title, Video URL, and Section are required.');
             return;
         }
         try {
@@ -80,7 +103,7 @@ const ItemForm = ({ item = {}, onSave, onCancel }) => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {/* Title */}
                         <div>
-                            <label htmlFor="title" className="block text-sm font-medium text-gray-300 mb-1">Title</label>
+                            <label htmlFor="title" className="block text-sm font-medium text-gray-300 mb-1">Title *</label>
                             <input type="text" name="title" id="title" value={formData.title} onChange={handleChange} className="w-full bg-gray-700 text-white rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
                         </div>
 
@@ -99,20 +122,21 @@ const ItemForm = ({ item = {}, onSave, onCancel }) => {
 
                      {/* Thumbnail URL */}
                     <div>
-                        <label htmlFor="thumbnailUrl" className="block text-sm font-medium text-gray-300 mb-1">Thumbnail URL</label>
+                        <label htmlFor="thumbnailUrl" className="block text-sm font-medium text-gray-300 mb-1">Thumbnail URL (Optional)</label>
                         <input type="text" name="thumbnailUrl" id="thumbnailUrl" value={formData.thumbnailUrl} onChange={handleChange} placeholder="https://example.com/image.jpg" className="w-full bg-gray-700 text-white rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
                     </div>
 
                     {/* Video URL */}
                     <div>
-                        <label htmlFor="videoUrl" className="block text-sm font-medium text-gray-300 mb-1">Video URL (Vimeo or YouTube)</label>
+                         {/* Change: Updated label to reflect Google Drive support */}
+                        <label htmlFor="videoUrl" className="block text-sm font-medium text-gray-300 mb-1">Video URL (Google Drive or YouTube) *</label>
                         <input type="text" name="videoUrl" id="videoUrl" value={formData.videoUrl} onChange={handleChange} className="w-full bg-gray-700 text-white rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         {/* Section */}
                         <div>
-                             <label htmlFor="sectionId" className="block text-sm font-medium text-gray-300 mb-1">Section</label>
+                             <label htmlFor="sectionId" className="block text-sm font-medium text-gray-300 mb-1">Section *</label>
                              <select name="sectionId" id="sectionId" value={formData.sectionId} onChange={handleChange} className="w-full bg-gray-700 text-white rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
                                 <option value="" disabled>Select a section</option>
                                 {sections.map(sec => <option key={sec.id} value={sec.id}>{sec.name}</option>)}

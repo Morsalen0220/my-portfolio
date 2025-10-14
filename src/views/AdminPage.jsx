@@ -85,7 +85,13 @@ const AdminPage = ({ isAdmin, items, setEditingItem, editingItem }) => {
     // Logic to switch between ItemForm and AdminPanel
     if (editingItem !== null) {
         // If we are adding or editing an item, show the form
-        return <ItemForm initialData={editingItem} setEditingItem={setEditingItem} />;
+        return (
+            <ItemForm 
+                item={editingItem} // Prop name changed to 'item'
+                onSave={() => setEditingItem(null)} // Handler to close form on save
+                onCancel={() => setEditingItem(null)} // Handler to close form on cancel
+            />
+        );
     }
 
     if (isAdmin) {
@@ -103,4 +109,3 @@ const AdminPage = ({ isAdmin, items, setEditingItem, editingItem }) => {
 };
 
 export default AdminPage;
-

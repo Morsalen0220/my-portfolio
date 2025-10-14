@@ -19,7 +19,8 @@ const VideoPlayerModal = ({ item, onClose }) => {
                 onClick={(e) => e.stopPropagation()} // Closes modal only on overlay click
             >
                 <div className="aspect-video bg-black">
-                   <VideoEmbed item={item} />
+                   {/* CHANGE: Pass item.videoUrl as url and set isModal=true */}
+                   <VideoEmbed url={item.videoUrl} isModal={true} />
                 </div>
                 <div className="p-6">
                     <div className="flex items-start justify-between">

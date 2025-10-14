@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence, useInView, useMotionValue, useTransform, animate } from 'framer-motion';
 import VideoPlayerModal from '../components/VideoPlayerModal';
+import VideoEmbed from '../components/VideoEmbed';
 import { getSectionsQuery, onSnapshot, getSiteSettings, getCollectionQuery } from '../firebase/utils';
 
 // --- Helper Components & Icons ---
@@ -14,6 +15,11 @@ const iconComponents = {
     DownloadIcon: ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>,
     MailIcon: ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>,
     XIcon: ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>,
+    // Adding commonly used icons for robustness
+    CameraIcon: ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>,
+    SettingsIcon: ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 .51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V12a1.65 1.65 0 0 0 1.51 1z"/></svg>,
+    MonitorIcon: ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>,
+    CodeIcon: ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>,
 };
 
 const DynamicIcon = ({ name, className }) => {
@@ -112,6 +118,7 @@ const ContactForm = () => {
                 <label className="block text-sm font-medium mb-2 text-gray-400">Message</label>
                 <textarea name="message" required placeholder="Tell me about your project..." rows={5} className="w-full bg-gray-700 text-base rounded-md p-4 border border-gray-600 resize-none focus:ring-2 focus:ring-violet-500" />
             </div>
+            {/* FIX: Removed extra '>' or malformed closing tag */}
             <Button size="lg" type="submit" className="w-full font-semibold !bg-red-600 hover:!bg-red-700" disabled={formStatus.status === 'loading'}>
                 {formStatus.status === 'loading' ? 'Sending...' : 'Send Message'}
             </Button>
@@ -228,7 +235,7 @@ const PublicPortfolio = ({ items }) => {
 
     return (
         <div className="min-h-screen bg-gray-900 text-gray-100 dark">
-            <style>{` :root { --primary: oklch(0.7 0.25 270); --accent: oklch(0.65 0.22 35); } .dark { background-color: #111827; } @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } } @keyframes fadeInUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } } @keyframes gradient { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } } @keyframes pulseSlow { 0%, 100% { opacity: 0.3; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.05); } } .animate-fade-in { animation: fadeIn 0.6s ease-out forwards; } .animate-fade-in-up { animation: fadeInUp 0.8s ease-out forwards; } .animate-gradient { background-size: 200% 200%; animation: gradient 15s ease infinite; } .animate-pulse-slow { animation: pulseSlow 4s ease-in-out infinite; } html { scroll-behavior: smooth; } `}</style>
+            <style>{` :root { --primary: oklch(0.7 0.25 270); --accent: oklch(0.65 0.22 35); } .dark { background-color: #111827; } @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } } @keyframes fadeInUp { from { opacity: 0; transform: translateY(30px); } to { transform: translateY(0); } } @keyframes gradient { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } } @keyframes pulseSlow { 0%, 100% { opacity: 0.3; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.05); } } .animate-fade-in { animation: fadeIn 0.6s ease-out forwards; } .animate-fade-in-up { animation: fadeInUp 0.8s ease-out forwards; } .animate-gradient { background-size: 200% 200%; animation: gradient 15s ease infinite; } .animate-pulse-slow { animation: pulseSlow 4s ease-in-out infinite; } html { scroll-behavior: smooth; } `}</style>
 
             <nav className="fixed bottom-4 md:top-4 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
                 <div className="flex items-center gap-2 bg-black/30 backdrop-blur-lg border border-white/10 rounded-full p-2 shadow-2xl pointer-events-auto">
@@ -266,7 +273,7 @@ const PublicPortfolio = ({ items }) => {
 
                 <section className="py-16 px-6 bg-gray-900 border-y border-gray-800">
                     <div className="max-w-7xl mx-auto">
-                        <div className="flex flex-row flex-wrap items-start justify-center gap-12 md:gap-16">
+                        <div className="flex flex-row flex-wrap items-start justify-evenly gap-12 md:gap-16">
                             {stats.map((stat, index) => (
                                 <AnimatedCounter
                                     key={index}
@@ -290,8 +297,12 @@ const PublicPortfolio = ({ items }) => {
                             {filteredItems.map((item, index) => (
                                 <Card key={item.id} onClick={() => setSelectedVideo(item)} style={{ animationDelay: `${index * 0.1}s` }}>
                                     <div className="relative aspect-video overflow-hidden">
+                                        {/* FIX: Prioritize thumbnail for static preview, even if videoURL exists. */}
                                         {item.thumbnailUrl ? (
                                             <img src={item.thumbnailUrl} alt={item.title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                                        ) : item.videoUrl ? (
+                                            // Fallback: If no thumbnail, show the muted video preview (isModal=false)
+                                            <VideoEmbed url={item.videoUrl} isModal={false} />
                                         ) : (
                                             <div className="w-full h-full bg-black flex items-center justify-center font-mono text-gray-500">{item.title}</div>
                                         )}

@@ -1,6 +1,6 @@
 import React from 'react';
 
-const VideoEmbed = ({ url }) => {
+const VideoEmbed = ({ url, isModal = false }) => {
     if (!url) {
         return (
             <div className="w-full h-full bg-gray-800 flex items-center justify-center">
@@ -11,40 +11,57 @@ const VideoEmbed = ({ url }) => {
 
     let embedUrl = '';
     const isYouTube = url.includes('youtube.com') || url.includes('youtu.be');
-    const isVimeo = url.includes('vimeo.com');
+    // Change: Check for Google Drive links
+    const isGoogleDrive = url.includes('drive.google.com');
 
-    // ব্রাউজারে শব্দসহ অটোপ্লে ব্লক করা থাকে, তাই mute=1 যোগ করা হয়েছে
+    // Autoplay, mute, and controls parameters (used for YouTube and iframe attributes)
+    const autoplayParam = isModal ? 'autoplay=1' : 'autoplay=0';
+    const muteParam = isModal ? '' : 'mute=1'; 
+    const controlsParam = isModal ? 'controls=1' : 'controls=0';
+
     if (isYouTube) {
-        const videoIdMatch = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/ ]{11})/);
+        // FIX: Regex updated to handle all YouTube formats including Shorts.
+        const videoIdMatch = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?|shorts)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/ ]{11})/i);
         const videoId = videoIdMatch ? videoIdMatch[1] : null;
         if (videoId) {
-            // ভিডিওটি ৩ সেকেন্ড থেকে অটোপ্লে করার জন্য প্যারামিটার যোগ করা হয়েছে
-            embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&start=3&mute=1`;
+            const youtubeParams = `?${autoplayParam}&${muteParam}&controls=${controlsParam}&modestbranding=1&rel=0`; 
+            embedUrl = `https://www.youtube.com/embed/${videoId}${youtubeParams}`;
         }
-    } else if (isVimeo) {
-        const videoIdMatch = url.match(/vimeo\.com\/(?:video\/)?(\d+)/);
-        const videoId = videoIdMatch ? videoIdMatch[1] : null;
-        if (videoId) {
-            // ভিডিওটি ৩ সেকেন্ড থেকে অটোপ্লে করার জন্য প্যারামিটার যোগ করা হয়েছে
-            embedUrl = `https://player.vimeo.com/video/${videoId}?autoplay=1&muted=1#t=3s`;
+    } else if (isGoogleDrive) {
+        // Change: Handle Google Drive links: https://drive.google.com/file/d/FILE_ID/view
+        const driveMatch = url.match(/drive\.google\.com\/file\/d\/([^/]+)/);
+        const fileId = driveMatch ? driveMatch[1] : null;
+        if (fileId) {
+            // Google Drive standard embed format (uses /preview)
+            embedUrl = `https://drive.google.com/file/d/${fileId}/preview`;
         }
     }
 
     if (!embedUrl) {
         return (
             <div className="w-full h-full bg-gray-800 flex items-center justify-center">
-                <p>Invalid video URL.</p>
+                <p>Invalid or Unsupported Video URL (Only YouTube/Google Drive supported).</p>
             </div>
         );
     }
 
+    // Set pointer-events-none for cards (isModal=false)
+    const pointerEventsClass = isModal ? 'pointer-events-auto' : 'pointer-events-none';
+    
+    // Use iframe attributes for better control over autoplay/mute
+    const iframeAllow = isModal 
+        ? "autoplay; fullscreen; picture-in-picture" 
+        : "picture-in-picture";
+
     return (
         <iframe
-            className="w-full h-full"
+            className={`w-full h-full ${pointerEventsClass}`}
             src={embedUrl}
             title="Video Player"
             frameBorder="0"
-            allow="autoplay; fullscreen; picture-in-picture"
+            // Enable autoplay and unmute for modal, but only allow picture-in-picture for card preview
+            allow={iframeAllow}
+            {...isModal ? {} : { muted: 'true' }} // Mute if not modal
             allowFullScreen
         ></iframe>
     );
