@@ -1,4 +1,4 @@
-// src/views/AdminPanel.jsx (Final Code)
+// src/views/AdminPanel.jsx (Final Code with Fix)
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { onSnapshot, getSectionsQuery, saveSection, deletePortfolioItem, getCollectionQuery, saveCollectionItem, deleteCollectionItem, getSiteSettings, saveSiteSettings } from '../firebase/utils';
@@ -119,7 +119,13 @@ const CollectionManager = ({ title, collectionName, fields, itemDisplayName, set
                         <p className="font-semibold text-sm truncate">{item.title || item.name || item.label}</p>
                         <div className="flex space-x-2 flex-shrink-0">
                             <button onClick={() => isPortfolio ? setEditingPortfolioItem(item) : setEditingItem(item)} className="px-3 py-0.5 bg-blue-600 rounded-md hover:bg-blue-700 transition text-xs">Edit</button>
-                            <button onClick={() => isPortfolio ? deletePortfolioItem(item.id) : handleDelete(item.id)} className="px-3 py-0.5 bg-red-600 rounded-md hover:bg-red-700 transition text-xs">Delete</button>
+                            {/* FIX: item.id check kora holo delete korar age */}
+                            <button 
+                                onClick={() => item.id && (isPortfolio ? deletePortfolioItem(item.id) : handleDelete(item.id))} 
+                                className="px-3 py-0.5 bg-red-600 rounded-md hover:bg-red-700 transition text-xs"
+                            >
+                                Delete
+                            </button>
                         </div>
                     </div>
                 ))}
@@ -131,6 +137,7 @@ const CollectionManager = ({ title, collectionName, fields, itemDisplayName, set
 
 // --- Settings Tab Component ---
 const SettingsTab = ({ siteSettings, handleSettingsChange, handleSaveSettings }) => (
+// ... (rest of SettingsTab component)
     <form onSubmit={handleSaveSettings} className="space-y-6">
         <div className="space-y-4 bg-gray-800/70 p-6 rounded-lg border border-gray-700">
             <h3 className="text-xl font-semibold text-violet-400">General Information</h3>
@@ -162,6 +169,7 @@ const SettingsTab = ({ siteSettings, handleSettingsChange, handleSaveSettings })
 
 // --- Data Management Tab Component ---
 const DataManagementTab = ({ items, sections, setEditingPortfolioItem }) => (
+// ... (rest of DataManagementTab component)
     <div className="space-y-6">
         {/* Manage Sections */}
         <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">
@@ -230,6 +238,7 @@ const DataManagementTab = ({ items, sections, setEditingPortfolioItem }) => (
 
 // --- Reusable Input/Textarea Components ---
 const InputGroup = ({ label, name, value, onChange, placeholder, type = 'text' }) => (
+// ... (rest of InputGroup component)
     <div>
         <label htmlFor={name} className="block text-sm font-medium text-gray-400">{label}</label>
         <input
@@ -245,6 +254,7 @@ const InputGroup = ({ label, name, value, onChange, placeholder, type = 'text' }
 );
 
 const TextAreaGroup = ({ label, name, value, onChange, placeholder }) => (
+// ... (rest of TextAreaGroup component)
     <div className="md:col-span-2">
         <label htmlFor={name} className="block text-sm font-medium text-gray-400">{label}</label>
         <textarea
@@ -261,6 +271,7 @@ const TextAreaGroup = ({ label, name, value, onChange, placeholder }) => (
 
 // --- Manage Sections Component (Kept same logic, separate component) ---
 const ManageSections = ({ sections }) => {
+// ... (rest of ManageSections component)
     const [newSectionName, setNewSectionName] = useState('');
     const [error, setError] = useState('');
 
@@ -306,6 +317,7 @@ const ManageSections = ({ sections }) => {
 
 // --- AdminPanel Main Component ---
 const AdminPanel = ({ items, setEditingItem }) => {
+// ... (rest of AdminPanel component)
     const [sections, setSections] = useState([]);
     const [siteSettings, setSiteSettings] = useState({});
     const [activeTab, setActiveTab] = useState('settings'); // 'settings' or 'data'

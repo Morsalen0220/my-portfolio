@@ -19,7 +19,7 @@ import {
     query,
     addDoc,
     serverTimestamp,
-    getDoc // getDoc import করুন
+    getDoc
 } from "firebase/firestore";
 
 // --- START Local Development Configuration ---
@@ -112,6 +112,11 @@ export const saveCollectionItem = async (collectionName, itemData) => {
 // Generic function to delete an item from a collection
 export const deleteCollectionItem = async (collectionName, itemId) => {
     try {
+        // FIX: Firebase Error theke bachanor jonyo itemId check kora holo
+        if (!itemId) {
+            console.warn(`Attempted to delete item from ${collectionName} without an ID. Operation aborted.`);
+            throw new Error("Cannot delete item: ID is missing.");
+        }
         const collectionRef = collection(db, 'artifacts', appId, 'public', 'data', collectionName);
         await deleteDoc(doc(collectionRef, itemId));
     } catch (error) {
@@ -143,7 +148,7 @@ export const saveSiteSettings = async (settingsData) => {
 };
 
 
-// Specific functions for existing collections (for backward compatibility if needed)
+// Specific functions for existing collections (Portfolio items are named 'portfolio_items' for data consistency)
 export const getPortfolioQuery = () => getCollectionQuery('portfolio_items');
 export const savePortfolioItem = (itemData) => saveCollectionItem('portfolio_items', itemData);
 export const deletePortfolioItem = (itemId) => deleteCollectionItem('portfolio_items', itemId);
