@@ -1,24 +1,25 @@
 import { initializeApp } from "firebase/app";
-import { 
-    getAuth, 
-    signInAnonymously, 
-    signInWithCustomToken, 
+import {
+    getAuth,
+    signInAnonymously,
+    signInWithCustomToken,
     onAuthStateChanged,
     signInWithEmailAndPassword,
     signOut,
     setPersistence,
-    browserLocalPersistence // নতুন import
+    browserLocalPersistence
 } from "firebase/auth";
-import { 
-    getFirestore, 
-    doc, 
-    setDoc, 
-    deleteDoc, 
-    onSnapshot, 
-    collection, 
+import {
+    getFirestore,
+    doc,
+    setDoc,
+    deleteDoc,
+    onSnapshot,
+    collection,
     query,
     addDoc,
-    serverTimestamp
+    serverTimestamp,
+    getDoc // getDoc import করুন
 } from "firebase/firestore";
 
 // --- START Local Development Configuration ---
@@ -34,15 +35,14 @@ const LOCAL_DEV_FIREBASE_CONFIG = {
 // --- END Local Development Configuration ---
 
 
-const firebaseConfig = typeof __firebase_config !== 'undefined' 
-    ? JSON.parse(__firebase_config) 
+const firebaseConfig = typeof __firebase_config !== 'undefined'
+    ? JSON.parse(__firebase_config)
     : LOCAL_DEV_FIREBASE_CONFIG;
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 
-// --- লগইন অবস্থা সেভ করার জন্য নতুন কোড ---
 setPersistence(auth, browserLocalPersistence)
   .catch((error) => {
     console.error("Auth persistence error:", error);
@@ -54,8 +54,6 @@ const IS_ADMIN_USER = typeof __is_admin_user !== 'undefined' ? __is_admin_user :
 
 export const signInUser = async () => {
     try {
-        // onAuthStateChanged এখন সেভ করা ইউজারকে খুঁজে নেবে, তাই এখানে কিছু করার দরকার নেই
-        // শুধু প্রথমবার অ্যানোনিমাস ইউজার হিসেবে সাইন ইন করানোর জন্য এই ব্যবস্থা
         if (!auth.currentUser) {
             const authToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
             if (authToken) {
@@ -76,30 +74,29 @@ export const signInWithEmail = async (email, password) => {
 export const signOutUser = async () => {
     try {
         await signOut(auth);
-        await signInAnonymously(auth); 
+        await signInAnonymously(auth);
     } catch (error)
         {
         console.error("Error signing out:", error);
     }
 };
 
+// --- Firestore References ---
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'local-dev-app-id';
+
 // --- Firestore Functions ---
 
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'local-dev-app-id';
-const portfolioCollectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'portfolio_items');
-const sectionsCollectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'sections');
-
-// Portfolio Items
-export const getPortfolioQuery = () => {
-    return query(portfolioCollectionRef);
+// Generic function to get a collection query
+export const getCollectionQuery = (collectionName) => {
+    return query(collection(db, 'artifacts', appId, 'public', 'data', collectionName));
 };
 
-export const savePortfolioItem = async (itemData) => {
+// Generic function to save an item to a collection
+export const saveCollectionItem = async (collectionName, itemData) => {
     try {
-        const docRef = itemData.id 
-            ? doc(portfolioCollectionRef, itemData.id)
-            : doc(portfolioCollectionRef);
-        
+        const collectionRef = collection(db, 'artifacts', appId, 'public', 'data', collectionName);
+        const docRef = itemData.id ? doc(collectionRef, itemData.id) : doc(collectionRef);
+
         const dataToSave = { ...itemData, updatedAt: serverTimestamp() };
         if (!itemData.id) {
             dataToSave.createdAt = serverTimestamp();
@@ -107,28 +104,54 @@ export const savePortfolioItem = async (itemData) => {
 
         await setDoc(docRef, dataToSave, { merge: true });
     } catch (error) {
-        console.error("Error saving portfolio item:", error);
+        console.error(`Error saving item to ${collectionName}:`, error);
         throw error;
     }
 };
 
-export const deletePortfolioItem = async (itemId) => {
+// Generic function to delete an item from a collection
+export const deleteCollectionItem = async (collectionName, itemId) => {
     try {
-        await deleteDoc(doc(portfolioCollectionRef, itemId));
+        const collectionRef = collection(db, 'artifacts', appId, 'public', 'data', collectionName);
+        await deleteDoc(doc(collectionRef, itemId));
     } catch (error) {
-        console.error("Error deleting portfolio item:", error);
+        console.error(`Error deleting item from ${collectionName}:`, error);
         throw error;
     }
 };
 
-// Sections
-export const getSectionsQuery = () => {
-    return query(sectionsCollectionRef);
+// Site Settings Functions
+const siteSettingsRef = doc(db, 'artifacts', appId, 'public', 'data', 'site_settings', 'config');
+
+export const getSiteSettings = async () => {
+    try {
+        const docSnap = await getDoc(siteSettingsRef);
+        return docSnap.exists() ? docSnap.data() : {};
+    } catch (error) {
+        console.error("Error fetching site settings:", error);
+        return {};
+    }
 };
 
+export const saveSiteSettings = async (settingsData) => {
+    try {
+        await setDoc(siteSettingsRef, settingsData, { merge: true });
+    } catch (error) {
+        console.error("Error saving site settings:", error);
+        throw error;
+    }
+};
+
+
+// Specific functions for existing collections (for backward compatibility if needed)
+export const getPortfolioQuery = () => getCollectionQuery('portfolio_items');
+export const savePortfolioItem = (itemData) => saveCollectionItem('portfolio_items', itemData);
+export const deletePortfolioItem = (itemId) => deleteCollectionItem('portfolio_items', itemId);
+
+export const getSectionsQuery = () => getCollectionQuery('sections');
 export const saveSection = async (sectionName) => {
     try {
-        await addDoc(sectionsCollectionRef, { 
+        await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'sections'), {
             name: sectionName,
             createdAt: serverTimestamp()
         });
@@ -139,25 +162,10 @@ export const saveSection = async (sectionName) => {
 };
 
 
-// Export necessary Firebase services and functions
-const contactMessagesCollectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'contact_messages');
-
-export const saveContactMessage = async (messageData) => {
-    try {
-        await addDoc(contactMessagesCollectionRef, {
-            ...messageData,
-            createdAt: serverTimestamp()
-        });
-    } catch (error) {
-        console.error("Error saving contact message:", error);
-        throw error; // Re-throw the error to be caught by the form handler
-    }
-};
-
-export { 
-    auth, 
-    db, 
-    onAuthStateChanged, 
+export {
+    auth,
+    db,
+    onAuthStateChanged,
     onSnapshot,
     collection,
     query,
@@ -165,4 +173,3 @@ export {
     IS_ADMIN_USER,
     serverTimestamp,
 };
-

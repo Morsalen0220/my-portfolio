@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Routes, Route, useNavigate } from 'react-router-dom'; // React Router থেকে import করুন
+import { Routes, Route, useNavigate } from 'react-router-dom';
 
 import PublicPortfolio from './views/PublicPortfolio';
-import AdminPage from './views/AdminPage'; // নতুন AdminPage import করুন
-import ItemForm from './components/ItemForm';
+import AdminPage from './views/AdminPage';
 import LandingAnimation from './components/LandingAnimation';
 import { 
     auth, 
@@ -11,8 +10,7 @@ import {
     onAuthStateChanged, 
     onSnapshot, 
     getPortfolioQuery, 
-    IS_ADMIN_USER, 
-    signOutUser 
+    IS_ADMIN_USER
 } from './firebase/utils';
 
 const App = () => {
@@ -21,13 +19,11 @@ const App = () => {
     const [showLanding, setShowLanding] = useState(true);
     const [isAuthReady, setIsAuthReady] = useState(false);
     const [isAdmin, setIsAdmin] = useState(false);
-    const [editingItem, setEditingItem] = useState(null); // ItemForm দেখানোর জন্য এই state টি থাকবে
+    const [editingItem, setEditingItem] = useState(null);
 
-    // Authentication এবং User state পর্যবেক্ষণের জন্য
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (user) => {
             if (user && !user.isAnonymous) {
-                // এখানে আপনার অ্যাডমিন ব্যবহারকারীর UID দিয়ে দিন
                 const permanentAdminUID = 'pwOSgNHvG9Yl8NBM28A66O7ONTP2';
                 const isPermanentAdmin = user.uid === permanentAdminUID;
                 setIsAdmin(IS_ADMIN_USER || isPermanentAdmin);
@@ -43,7 +39,6 @@ const App = () => {
         return () => unsubscribe();
     }, [showLanding]);
 
-    // Firestore থেকে ডেটা লোড করার জন্য
     useEffect(() => {
         if (!db) return;
 
@@ -61,15 +56,13 @@ const App = () => {
         return () => unsubscribe();
     }, []);
 
-    // Landing animation শেষ হলে main content দেখাবে
     if (showLanding) {
         return <LandingAnimation onAnimationComplete={() => {
             setShowLanding(false);
-            setLoading(false); // Animation শেষ হলে লোডিং বন্ধ হবে
+            setLoading(false);
         }} />;
     }
 
-    // Auth state রেডি না হওয়া পর্যন্ত লোডিং স্ক্রিন দেখাবে
     if (!isAuthReady) {
         return (
             <div className="min-h-screen bg-gray-900 flex items-center justify-center">
@@ -78,16 +71,12 @@ const App = () => {
         );
     }
 
-    // React Router দিয়ে পেজ রেন্ডারিং
     return (
         <Routes>
-            {/* Public Portfolio Route */}
             <Route 
                 path="/" 
                 element={<PublicPortfolio items={items} />} 
             />
-
-            {/* Admin Route */}
             <Route 
                 path="/admin" 
                 element={

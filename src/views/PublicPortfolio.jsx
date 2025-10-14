@@ -1,19 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from "framer-motion";
-import VideoEmbed from '../components/VideoEmbed';
-import { getSectionsQuery, onSnapshot } from '../firebase/utils'; // saveContactMessage import soriye dewa hoyeche
 import VideoPlayerModal from '../components/VideoPlayerModal';
+import { getSectionsQuery, onSnapshot, getSiteSettings, getCollectionQuery } from '../firebase/utils';
 
 // --- Helper Components & Icons ---
-const PlayIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>;
-const FilmIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line><line x1="2" y1="7" x2="7" y2="7"></line><line x1="2" y1="17" x2="7" y2="17"></line><line x1="17" y1="17" x2="22" y2="17"></line><line x1="17" y1="7" x2="22" y2="7"></line></svg>;
-const UsersIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>;
-const MailIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>;
-const DownloadIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>;
-const XIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>;
-const VideoIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>;
-const SparklesIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3L9.5 8.5 4 11l5.5 2.5L12 19l2.5-5.5L20 11l-5.5-2.5z"/></svg>;
-const MicIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line></svg>;
+const iconComponents = {
+    FilmIcon: ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line><line x1="2" y1="7" x2="7" y2="7"></line><line x1="2" y1="17" x2="7" y2="17"></line><line x1="17" y1="17" x2="22" y2="17"></line><line x1="17" y1="7" x2="22" y2="7"></line></svg>,
+    UsersIcon: ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>,
+    VideoIcon: ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>,
+    SparklesIcon: ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M12 3L9.5 8.5 4 11l5.5 2.5L12 19l2.5-5.5L20 11l-5.5-2.5z"/></svg>,
+    MicIcon: ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line></svg>,
+    PlayIcon: ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>,
+    DownloadIcon: ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>,
+    MailIcon: ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>,
+    XIcon: ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>,
+};
+
+const DynamicIcon = ({ name, className }) => {
+    const IconComponent = iconComponents[name];
+    return IconComponent ? <IconComponent className={className} /> : null;
+};
 
 const Card = ({ children, className, ...props }) => ( <div className={`overflow-hidden bg-gray-800/50 border-gray-700 hover:border-violet-500 transition-all duration-500 cursor-pointer animate-fade-in-up hover:shadow-2xl hover:shadow-violet-500/10 rounded-lg ${className}`} {...props}> {children} </div> );
 const Button = ({ children, variant, size, className, ...props }) => {
@@ -23,7 +29,6 @@ const Button = ({ children, variant, size, className, ...props }) => {
     return <button className={`${baseClasses} ${sizeClasses} ${variantClasses} ${className}`} {...props}>{children}</button>;
 };
 
-// --- Reusable Contact Form with Formspree ---
 const ContactForm = () => {
     const [formStatus, setFormStatus] = useState({ status: 'idle', message: '' });
 
@@ -31,16 +36,13 @@ const ContactForm = () => {
         e.preventDefault();
         const form = e.target;
         const data = new FormData(form);
-        
         setFormStatus({ status: 'loading', message: 'Sending...' });
-
         try {
             const response = await fetch(form.action, {
                 method: form.method,
                 body: data,
                 headers: { 'Accept': 'application/json' }
             });
-
             if (response.ok) {
                 setFormStatus({ status: 'success', message: 'Message sent successfully! Thank you.' });
                 form.reset();
@@ -78,14 +80,13 @@ const ContactForm = () => {
     );
 };
 
-// --- Contact Form Modal for Mobile ---
 const ContactFormModal = ({ isOpen, onClose }) => {
     if (!isOpen) return null;
     return (
         <AnimatePresence>
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
                 <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="relative w-full max-w-lg bg-gray-800 border border-gray-700 rounded-lg shadow-xl p-6" onClick={(e) => e.stopPropagation()}>
-                    <button onClick={onClose} className="absolute top-4 right-4 text-gray-500 hover:text-white"><XIcon/></button>
+                    <button onClick={onClose} className="absolute top-4 right-4 text-gray-500 hover:text-white"><DynamicIcon name="XIcon"/></button>
                     <h3 className="text-2xl font-bold mb-6 text-center text-red-500">Get in Touch</h3>
                     <ContactForm />
                 </motion.div>
@@ -95,12 +96,6 @@ const ContactFormModal = ({ isOpen, onClose }) => {
 };
 
 
-// --- Static Data for sections ---
-const stats = [ { icon: FilmIcon, value: "100+", label: "Projects Completed" }, { icon: UsersIcon, value: "50+", label: "Happy Clients" }, ];
-const skills = [ { name: "Adobe Premiere Pro", level: 95 }, { name: "DaVinci Resolve", level: 90 }, { name: "After Effects", level: 85 }, { name: "Final Cut Pro", level: 80 }, { name: "Color Grading", level: 92 }, { name: "Motion Graphics", level: 78 }, ];
-const servicesData = [ { icon: VideoIcon, title: "Social Media Reels", description: "Eye-catching short-form content for Instagram, TikTok, etc." }, { icon: SparklesIcon, title: "Motion Graphics", description: "Professional animated graphics, logo reveals, and explainer videos." }, { icon: MicIcon, title: "Podcast Editing", description: "Full podcast production including audio cleanup and video sync." }, ];
-const services = [ "Video Editing & Post-Production", "Color Grading & Correction", "Motion Graphics & VFX", "Sound Design & Mixing", "Commercial & Brand Content", ];
-
 const PublicPortfolio = ({ items }) => {
     const [sections, setSections] = useState([]);
     const [activeSection, setActiveSection] = useState('hero');
@@ -108,20 +103,63 @@ const PublicPortfolio = ({ items }) => {
     const [activeFilter, setActiveFilter] = useState('all');
     const [isContactFormOpen, setContactFormOpen] = useState(false);
 
+    const [siteSettings, setSiteSettings] = useState({});
+    const [stats, setStats] = useState([]);
+    const [skills, setSkills] = useState([]);
+    const [servicesData, setServicesData] = useState([]);
+    const [serviceList, setServiceList] = useState([]);
+
     useEffect(() => {
+        const fetchSettings = async () => {
+            const settings = await getSiteSettings();
+            setSiteSettings(settings);
+        };
+        fetchSettings();
+
+        const statsQuery = getCollectionQuery('stats');
+        const unsubscribeStats = onSnapshot(statsQuery, (snapshot) => {
+            const fetchedStats = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setStats(fetchedStats);
+        });
+
+        const skillsQuery = getCollectionQuery('skills');
+        const unsubscribeSkills = onSnapshot(skillsQuery, (snapshot) => {
+            const fetchedSkills = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).sort((a, b) => b.level - a.level);
+            setSkills(fetchedSkills);
+        });
+
+        const servicesQuery = getCollectionQuery('services');
+        const unsubscribeServices = onSnapshot(servicesQuery, (snapshot) => {
+            const fetchedServices = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setServicesData(fetchedServices);
+        });
+
+        const serviceListQuery = getCollectionQuery('service_list');
+        const unsubscribeServiceList = onSnapshot(serviceListQuery, (snapshot) => {
+            const fetchedList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setServiceList(fetchedList);
+        });
+
         const q = getSectionsQuery();
-        const unsubscribe = onSnapshot(q, (snapshot) => {
+        const unsubscribeSections = onSnapshot(q, (snapshot) => {
             const fetchedSections = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).sort((a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0));
             setSections(fetchedSections);
             if (fetchedSections.length > 0 && activeFilter === 'all') {
                 setActiveFilter(fetchedSections[0].id);
             }
         });
-        return () => unsubscribe();
+
+        return () => {
+            unsubscribeStats();
+            unsubscribeSkills();
+            unsubscribeServices();
+            unsubscribeServiceList();
+            unsubscribeSections();
+        };
     }, []);
 
     const filteredItems = activeFilter === 'all' ? items : items.filter(item => item.sectionId === activeFilter);
-    
+
     useEffect(() => {
         const sectionIds = ['hero', 'work', 'services', 'skills', 'contact'];
         const observer = new IntersectionObserver((entries) => {
@@ -149,7 +187,7 @@ const PublicPortfolio = ({ items }) => {
     return (
         <div className="min-h-screen bg-gray-900 text-gray-100 dark">
             <style>{` :root { --primary: oklch(0.7 0.25 270); --accent: oklch(0.65 0.22 35); } .dark { background-color: #111827; } @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } } @keyframes fadeInUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } } @keyframes gradient { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } } @keyframes pulseSlow { 0%, 100% { opacity: 0.3; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.05); } } .animate-fade-in { animation: fadeIn 0.6s ease-out forwards; } .animate-fade-in-up { animation: fadeInUp 0.8s ease-out forwards; } .animate-gradient { background-size: 200% 200%; animation: gradient 15s ease infinite; } .animate-pulse-slow { animation: pulseSlow 4s ease-in-out infinite; } html { scroll-behavior: smooth; } `}</style>
-            
+
             <nav className="fixed bottom-4 md:top-4 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
                 <div className="flex items-center gap-2 bg-black/30 backdrop-blur-lg border border-white/10 rounded-full p-2 shadow-2xl pointer-events-auto">
                     {navLinks.map(link => ( <a key={link.id} href={`#${link.id}`} className={getNavLinkClass(link.id)}> {link.icon} <span className={getNavLinkClass(link.id).includes('bg-violet-600') ? 'inline' : 'hidden md:inline'}>{link.label}</span> </a> ))}
@@ -157,7 +195,6 @@ const PublicPortfolio = ({ items }) => {
             </nav>
 
             <main>
-                {/* Hero Section */}
                 <section id="hero" className="relative pt-32 pb-20 px-6 overflow-hidden min-h-screen flex items-center">
                     <div className="absolute inset-0 bg-gradient-to-br from-violet-600/5 via-transparent to-red-500/5 animate-gradient" />
                     <div className="absolute top-20 right-0 w-96 h-96 bg-violet-600/10 rounded-full blur-3xl animate-pulse-slow" />
@@ -165,19 +202,19 @@ const PublicPortfolio = ({ items }) => {
                     <div className="max-w-7xl mx-auto relative z-10">
                         <div className="grid md:grid-cols-2 gap-12 items-center">
                             <div className="space-y-6 animate-fade-in-up">
-                                <div className="inline-block px-4 py-2 bg-violet-600/10 text-violet-400 rounded-full text-sm font-mono backdrop-blur-sm border border-violet-600/20">Video Editor & Storyteller</div>
-                                <h2 className="text-5xl md:text-7xl font-bold leading-tight text-balance">Crafting Visual <span className="text-violet-500">Stories</span></h2>
-                                <p className="text-xl text-gray-400 leading-relaxed text-pretty">I transform raw footage into compelling narratives that captivate audiences and elevate brands.</p>
+                                <div className="inline-block px-4 py-2 bg-violet-600/10 text-violet-400 rounded-full text-sm font-mono backdrop-blur-sm border border-violet-600/20">{siteSettings.heroTagline || "Video Editor & Storyteller"}</div>
+                                <h2 className="text-5xl md:text-7xl font-bold leading-tight text-balance" dangerouslySetInnerHTML={{ __html: siteSettings.heroTitle || 'Crafting Visual <span class="text-violet-500">Stories</span>' }}></h2>
+                                <p className="text-xl text-gray-400 leading-relaxed text-pretty">{siteSettings.heroSubtitle || "I transform raw footage into compelling narratives that captivate audiences and elevate brands."}</p>
                                 <div className="flex gap-4 pt-4">
-                                    <a href="#work"><Button size="lg" className="gap-2 group"><PlayIcon /> View My Work</Button></a>
-                                    <a href="/resume.pdf" download><Button size="lg" variant="outline" className="gap-2 group bg-transparent border-gray-600 hover:bg-gray-800"><DownloadIcon className="group-hover:translate-y-0.5 transition-transform" /> Download Resume</Button></a>
+                                    <a href="#work"><Button size="lg" className="gap-2 group"><DynamicIcon name="PlayIcon"/> View My Work</Button></a>
+                                    <a href={siteSettings.resumeUrl || "/resume.pdf"} download><Button size="lg" variant="outline" className="gap-2 group bg-transparent border-gray-600 hover:bg-gray-800"><DynamicIcon name="DownloadIcon" className="group-hover:translate-y-0.5 transition-transform" /> Download Resume</Button></a>
                                 </div>
                             </div>
                             <div className="relative animate-fade-in-up hidden md:block" style={{ animationDelay: "0.2s" }}>
                                 <div className="aspect-video rounded-lg overflow-hidden bg-gray-800 border border-gray-700 shadow-2xl relative group">
-                                     <img src="https://placehold.co/1280x720/111827/7c3aed?text=Showreel" alt="Video editing workspace" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                                     <img src={siteSettings.heroImageUrl || "https://placehold.co/1280x720/111827/7c3aed?text=Showreel"} alt="Video editing workspace" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
                                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                                         <div className="w-20 h-20 rounded-full bg-violet-600/90 flex items-center justify-center backdrop-blur-sm"><PlayIcon className="text-white ml-1 w-8 h-8"/></div>
+                                         <div className="w-20 h-20 rounded-full bg-violet-600/90 flex items-center justify-center backdrop-blur-sm"><DynamicIcon name="PlayIcon" className="text-white ml-1 w-8 h-8"/></div>
                                      </div>
                                 </div>
                             </div>
@@ -186,7 +223,7 @@ const PublicPortfolio = ({ items }) => {
                 </section>
 
                 <section className="py-12 px-6 bg-gray-800/50 backdrop-blur-sm border-y border-gray-700">
-                    <div className="max-w-7xl mx-auto"><div className="grid grid-cols-2 md:grid-cols-2 gap-8">{stats.map((stat, index) => ( <div key={index} className="text-center space-y-2 animate-fade-in-up" style={{ animationDelay: `${index * 0.1}s` }}> <stat.icon className="w-8 h-8 mx-auto text-violet-400 mb-2" /> <div className="text-3xl md:text-4xl font-bold text-violet-400">{stat.value}</div> <div className="text-sm text-gray-400 uppercase tracking-wider">{stat.label}</div> </div> ))}</div></div>
+                    <div className="max-w-7xl mx-auto"><div className="grid grid-cols-2 md:grid-cols-2 gap-8">{stats.map((stat, index) => ( <div key={index} className="text-center space-y-2 animate-fade-in-up" style={{ animationDelay: `${index * 0.1}s` }}> <DynamicIcon name={stat.icon} className="w-8 h-8 mx-auto text-violet-400 mb-2" /> <div className="text-3xl md:text-4xl font-bold text-violet-400">{stat.value}</div> <div className="text-sm text-gray-400 uppercase tracking-wider">{stat.label}</div> </div> ))}</div></div>
                 </section>
 
                 <section id="work" className="py-20 px-6">
@@ -201,7 +238,7 @@ const PublicPortfolio = ({ items }) => {
                                 <Card key={item.id} onClick={() => setSelectedVideo(item)} style={{ animationDelay: `${index * 0.1}s` }}>
                                     <div className="relative aspect-video overflow-hidden">
                                         <div className="w-full h-full bg-black flex items-center justify-center font-mono text-gray-500">{item.title}</div>
-                                        <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex flex-col justify-end p-6"><div className="flex items-center gap-2 text-white"><div className="w-12 h-12 rounded-full bg-violet-600/90 flex items-center justify-center backdrop-blur-sm"><PlayIcon className="ml-0.5" /></div><span className="font-mono text-sm">{item.duration || '0:00'}</span></div></div>
+                                        <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex flex-col justify-end p-6"><div className="flex items-center gap-2 text-white"><div className="w-12 h-12 rounded-full bg-violet-600/90 flex items-center justify-center backdrop-blur-sm"><DynamicIcon name="PlayIcon" className="ml-0.5" /></div><span className="font-mono text-sm">{item.duration || '0:00'}</span></div></div>
                                     </div>
                                     <div className="p-6 space-y-3">
                                         <h4 className="text-xl font-bold group-hover:text-violet-400 transition-colors">{item.title}</h4>
@@ -217,15 +254,15 @@ const PublicPortfolio = ({ items }) => {
                 <section id="services" className="py-20 px-6">
                     <div className="max-w-7xl mx-auto">
                         <div className="text-center mb-16">
-                            <h3 className="text-4xl md:text-5xl font-bold mb-4">What I Offer</h3>
-                            <p className="text-gray-400 text-lg max-w-2xl mx-auto">High-quality services to bring your vision to life.</p>
+                            <h3 className="text-4xl md:text-5xl font-bold mb-4">{siteSettings.servicesTitle || "What I Offer"}</h3>
+                            <p className="text-gray-400 text-lg max-w-2xl mx-auto">{siteSettings.servicesSubtitle || "High-quality services to bring your vision to life."}</p>
                         </div>
                         <div className="grid md:grid-cols-3 gap-8">
                             {servicesData.map((service, index) => (
                                 <motion.div key={index} initial={{ opacity: 0, y: 50 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5, delay: index * 0.1 }}>
                                     <div className="bg-gray-800/50 p-8 rounded-lg text-center h-full border border-gray-700 hover:border-violet-500 hover:bg-gray-800 transition-all duration-300">
                                         <div className="inline-flex items-center justify-center w-16 h-16 mb-6 rounded-full bg-violet-600/10 text-violet-400">
-                                            <service.icon className="w-8 h-8" />
+                                            <DynamicIcon name={service.icon} className="w-8 h-8" />
                                         </div>
                                         <h4 className="text-2xl font-bold mb-3">{service.title}</h4>
                                         <p className="text-gray-400">{service.description}</p>
@@ -240,12 +277,12 @@ const PublicPortfolio = ({ items }) => {
                     <div className="max-w-7xl mx-auto">
                         <div className="grid md:grid-cols-2 gap-16 items-center">
                             <div className="space-y-6 animate-fade-in-up">
-                                <h3 className="text-4xl md:text-5xl font-bold">Technical Expertise</h3>
-                                <p className="text-gray-400 text-lg leading-relaxed">Proficient in industry-standard tools and techniques, with a focus on storytelling, pacing, and visual aesthetics.</p>
+                                <h3 className="text-4xl md:text-5xl font-bold">{siteSettings.skillsTitle || "Technical Expertise"}</h3>
+                                <p className="text-gray-400 text-lg leading-relaxed">{siteSettings.skillsSubtitle || "Proficient in industry-standard tools and techniques, with a focus on storytelling, pacing, and visual aesthetics."}</p>
                                 <div className="space-y-4 pt-4">{skills.map((skill, index) => ( <div key={index} className="space-y-2 group"> <div className="flex justify-between text-sm"> <span className="font-medium group-hover:text-violet-400 transition-colors">{skill.name}</span> <span className="text-gray-500 font-mono">{skill.level}%</span> </div> <div className="h-2 bg-gray-700 rounded-full overflow-hidden"> <div className="h-full bg-gradient-to-r from-violet-500 to-red-500 rounded-full transition-all duration-1000 ease-out" style={{ width: `${skill.level}%` }} /> </div> </div> ))}</div>
                             </div>
                             <div className="space-y-6 animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
-                                <Card className="p-8 bg-gray-800 border-gray-700"><h4 className="text-2xl font-bold mb-6">Service List</h4><ul className="space-y-4">{services.map((service, index) => ( <li key={index} className="flex items-center gap-3 text-gray-400 group hover:text-white transition-colors"> <div className="w-1.5 h-1.5 bg-violet-500 rounded-full group-hover:scale-150 transition-transform" /> {service} </li> ))}</ul></Card>
+                                <Card className="p-8 bg-gray-800 border-gray-700"><h4 className="text-2xl font-bold mb-6">Service List</h4><ul className="space-y-4">{serviceList.map((service, index) => ( <li key={index} className="flex items-center gap-3 text-gray-400 group hover:text-white transition-colors"> <div className="w-1.5 h-1.5 bg-violet-500 rounded-full group-hover:scale-150 transition-transform" /> {service.name} </li> ))}</ul></Card>
                             </div>
                         </div>
                     </div>
@@ -255,13 +292,13 @@ const PublicPortfolio = ({ items }) => {
                     <div className="max-w-4xl mx-auto">
                         <div className="text-center mb-12"><h2 className="text-4xl md:text-5xl font-bold text-balance">Let's Create Something <span className="text-violet-500">Amazing</span></h2><p className="text-xl text-gray-400 text-pretty mt-4">Available for freelance projects. Let's bring your vision to life.</p></div>
                         <div className="hidden md:block bg-gray-800/50 p-8 rounded-lg"><ContactForm /></div>
-                        <div className="md:hidden text-center"><Button size="lg" className="gap-2 group !bg-red-600 hover:!bg-red-700" onClick={() => setContactFormOpen(true)}><MailIcon/> Get in Touch</Button></div>
+                        <div className="md:hidden text-center"><Button size="lg" className="gap-2 group !bg-red-600 hover:!bg-red-700" onClick={() => setContactFormOpen(true)}><DynamicIcon name="MailIcon"/> Get in Touch</Button></div>
                     </div>
                 </section>
             </main>
 
             <footer className="py-8 px-6 border-t border-gray-800">
-                <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4"><p className="text-sm text-gray-500">&copy; {new Date().getFullYear()} Morsalen Islam. All rights reserved.</p><p className="text-sm text-gray-500 font-mono">Crafted with passion for visual storytelling</p></div>
+                <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4"><p className="text-sm text-gray-500">&copy; {new Date().getFullYear()} {siteSettings.footerName || "Morsalen Islam"}. All rights reserved.</p><p className="text-sm text-gray-500 font-mono">{siteSettings.footerTagline || "Crafted with passion for visual storytelling"}</p></div>
             </footer>
             
             <ContactFormModal isOpen={isContactFormOpen} onClose={() => setContactFormOpen(false)} />
@@ -271,4 +308,3 @@ const PublicPortfolio = ({ items }) => {
 };
 
 export default PublicPortfolio;
-
