@@ -11,10 +11,41 @@ import {
     ContactForm, 
     ContactFormModal,
     SocialLinksSection,
-    // iconComponents is not needed directly here
 } from '../components/PortfolioHelpers'; 
 
-// --- PublicPortfolio মূল কম্পোনেন্ট ---
+// --- Sub-Component: Pagination ---
+const Pagination = ({ itemsPerPage, totalItems, paginate, currentPage }) => {
+    const pageNumbers = [];
+    for (let i = 1; i <= Math.ceil(totalItems / itemsPerPage); i++) {
+        pageNumbers.push(i);
+    }
+
+    if (pageNumbers.length <= 1) return null; // Don't show pagination if only one page
+
+    return (
+        <nav className="mt-12 flex justify-center">
+            <ul className="flex items-center gap-2">
+                {pageNumbers.map(number => (
+                    <li key={number}>
+                        <button
+                            onClick={() => paginate(number)}
+                            className={`px-4 py-2 text-sm font-semibold rounded-md transition-colors ${
+                                currentPage === number
+                                    ? 'bg-violet-600 text-white shadow-lg'
+                                    : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                            }`}
+                        >
+                            {number}
+                        </button>
+                    </li>
+                ))}
+            </ul>
+        </nav>
+    );
+};
+
+
+// --- PublicPortfolio Main Component ---
 const PublicPortfolio = ({ items }) => {
     const [sections, setSections] = useState([]);
     const [activeSection, setActiveSection] = useState('hero');
@@ -27,6 +58,25 @@ const PublicPortfolio = ({ items }) => {
     const [skills, setSkills] = useState([]);
     const [servicesData, setServicesData] = useState([]);
     const [serviceList, setServiceList] = useState([]);
+
+    // --- Pagination State ---
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage, setItemsPerPage] = useState(6); // Default for desktop
+
+    // Effect for responsive items per page
+    useEffect(() => {
+        const handleResize = () => {
+            setItemsPerPage(window.innerWidth < 768 ? 5 : 6); // 5 for mobile, 6 for desktop
+        };
+        handleResize(); // Set initial value
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+    
+    // Effect to reset page when filter changes
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [activeFilter]);
 
     useEffect(() => {
         const fetchSettings = async () => {
@@ -77,6 +127,13 @@ const PublicPortfolio = ({ items }) => {
     }, []);
 
     const filteredItems = activeFilter === 'all' ? items : items.filter(item => item.sectionId === activeFilter);
+    
+    // --- Pagination Logic ---
+    const indexOfLastItem = currentPage * itemsPerPage;
+    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+    const currentItems = filteredItems.slice(indexOfFirstItem, indexOfLastItem);
+    const paginate = pageNumber => setCurrentPage(pageNumber);
+
 
     useEffect(() => {
         const sectionIds = ['hero', 'work', 'services', 'skills', 'stats', 'contact', 'social-links'];
@@ -94,18 +151,15 @@ const PublicPortfolio = ({ items }) => {
         return `${baseClass} text-gray-300 hover:bg-white/10 hover:text-white`;
     };
 
-    // NOTE: Icons are imported via DynamicIcon
+    // FIX: Removed 'Stats' and 'Social' from the navigation links
     const navLinks = [
         { id: 'hero', label: 'Home', icon: <DynamicIcon name="CodeIcon" className="h-5 w-5"/> }, 
         { id: 'work', label: 'Work', icon: <DynamicIcon name="MonitorIcon" className="h-5 w-5"/> },
         { id: 'services', label: 'Services', icon: <DynamicIcon name="UsersIcon" className="h-5 w-5"/> },
         { id: 'skills', label: 'Skills', icon: <DynamicIcon name="SettingsIcon" className="h-5 w-5"/> },
-        { id: 'stats', label: 'Stats', icon: <DynamicIcon name="TrendingUpIcon" className="h-5 w-5"/> },
         { id: 'contact', label: 'Contact', icon: <DynamicIcon name="MailIcon" className="h-5 w-5"/> },
-        { id: 'social-links', label: 'Social', icon: <DynamicIcon name="SocialIcon" className="h-5 w-5"/> }, 
     ];
 
-    // FIX: Combine "All" filter and dynamic sections into one array for consistent rendering
     const filterOptions = [
         { id: 'all', name: 'All' },
         ...sections,
@@ -156,15 +210,17 @@ const PublicPortfolio = ({ items }) => {
 
                 <section id="work" className="py-20 px-6">
                     <div className="max-w-7xl mx-auto">
-                        <div className="mb-12 text-center"><h3 className="text-4xl md:text-5xl font-bold mb-4">Featured Work</h3><p className="text-gray-400 text-lg max-w-2xl mx-auto">A selection of recent projects showcasing diverse editing styles.</p></div>
+                        <div className="mb-12 text-center">
+                            <h3 className="text-4xl md:text-5xl font-bold mb-4">Featured Work</h3>
+                            <p className="text-gray-400 text-lg max-w-2xl mx-auto">A selection of recent projects showcasing diverse editing styles.</p>
+                        </div>
                         
-                        {/* FIX: Combined filter buttons for consistent rendering/ordering */}
                         <div className="flex flex-wrap justify-center gap-3 mb-12">
-                            {filterOptions.map((filter, index) => ( 
+                            {filterOptions.map((filter) => ( 
                                 <button 
-                                    key={filter.id || index} 
+                                    key={filter.id} 
                                     onClick={() => setActiveFilter(filter.id)} 
-                                    className={`px-6 py-2 rounded-full text-sm font-medium transition-all duration-300 ${ activeFilter === filter.id ? "bg-violet-600 text-white shadow-lg shadow-violet-600/25" : "bg-gray-800 text-gray-400 hover:bg-gray-700 border border-gray-700" }`}
+                                    className={`px-6 py-2 rounded-full text-sm font-medium transition-all duration-300 ${ activeFilter === filter.id ? "bg-violet-600 text-white shadow-lg" : "bg-gray-800 text-gray-400 hover:bg-gray-700" }`}
                                 >
                                     {filter.name}
                                 </button> 
@@ -172,9 +228,8 @@ const PublicPortfolio = ({ items }) => {
                         </div>
                         
                         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-                            {/* Portfolio Item Key */}
-                            {filteredItems.map((item, index) => (
-                                <Card key={item.id || index} onClick={() => setSelectedVideo(item)} style={{ animationDelay: `${index * 0.1}s` }}>
+                            {currentItems.map((item, index) => (
+                                <Card key={item.id} onClick={() => setSelectedVideo(item)} style={{ animationDelay: `${index * 0.1}s` }}>
                                     <div className="relative aspect-video overflow-hidden">
                                         {item.thumbnailUrl ? (
                                             <img src={item.thumbnailUrl} alt={item.title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
@@ -195,12 +250,18 @@ const PublicPortfolio = ({ items }) => {
                                     <div className="p-6 space-y-3">
                                         <h4 className="text-xl font-bold group-hover:text-violet-400 transition-colors">{item.title}</h4>
                                         <p className="text-gray-400 text-sm leading-relaxed">{item.description || 'No description available.'}</p>
-                                        {/* Tools map key */}
                                         <div className="flex flex-wrap gap-2 pt-2">{item.tools && item.tools.split(',').map((tool, tagIndex) => ( <span key={tool.trim() || tagIndex} className="px-3 py-1 bg-gray-700 text-gray-300 rounded-full text-xs">{tool.trim()}</span> ))}</div>
                                     </div>
                                 </Card>
                             ))}
                         </div>
+                        
+                        <Pagination
+                            itemsPerPage={itemsPerPage}
+                            totalItems={filteredItems.length}
+                            paginate={paginate}
+                            currentPage={currentPage}
+                        />
                     </div>
                 </section>
                 
@@ -211,7 +272,6 @@ const PublicPortfolio = ({ items }) => {
                             <p className="text-gray-400 text-lg max-w-2xl mx-auto">{siteSettings.servicesSubtitle || "High-quality services to bring your vision to life."}</p>
                         </div>
                         <div className="grid md:grid-cols-3 gap-8">
-                            {/* Services map key */}
                             {servicesData.map((service, index) => (
                                 <motion.div key={service.id || index} initial={{ opacity: 0, y: 50 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5, delay: index * 0.1 }}>
                                     <div className="bg-gray-800/50 p-8 rounded-lg text-center h-full border border-gray-700 hover:border-violet-500 hover:bg-gray-800 transition-all duration-300">
@@ -234,14 +294,12 @@ const PublicPortfolio = ({ items }) => {
                                 <h3 className="text-4xl md:text-5xl font-bold">{siteSettings.skillsTitle || "Technical Expertise"}</h3>
                                 <p className="text-gray-400 text-lg leading-relaxed">{siteSettings.skillsSubtitle || "Proficient in industry-standard tools and techniques, with a focus on storytelling, pacing, and visual aesthetics."}</p>
                                 <div className="space-y-4 pt-4">
-                                    {/* Skills map key */}
                                     {skills.map((skill, index) => ( <div key={skill.id || index} className="space-y-2 group"> <div className="flex justify-between text-sm"> <span className="font-medium group-hover:text-violet-400 transition-colors">{skill.name}</span> <span className="text-gray-500 font-mono">{skill.level}%</span> </div> <div className="h-2 bg-gray-700 rounded-full overflow-hidden"> <div className="h-full bg-gradient-to-r from-violet-500 to-red-500 rounded-full transition-all duration-1000 ease-out" style={{ width: `${skill.level}%` }} /> </div> </div> ))}
                                 </div>
                             </div>
                             <div className="space-y-6 animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
                                 <Card className="p-8 bg-gray-800 border-gray-700"><h4 className="text-2xl font-bold mb-6">Service List</h4>
                                     <ul className="space-y-4">
-                                        {/* Service List map key */}
                                         {serviceList.map((service, index) => ( <li key={service.id || index} className="flex items-center gap-3 text-gray-400 group hover:text-white transition-colors"> <div className="w-1.5 h-1.5 bg-violet-500 rounded-full group-hover:scale-150 transition-transform" /> {service.name} </li> ))}
                                     </ul>
                                 </Card>
@@ -250,7 +308,6 @@ const PublicPortfolio = ({ items }) => {
                     </div>
                 </section>
                 
-                {/* COUNTER SECTION: Kept position as requested (after Skills, before Contact) */}
                 <section id="stats" className="py-16 px-6 bg-gray-900 border-y border-gray-800">
                     <div className="max-w-7xl mx-auto">
                         <div className="flex flex-row flex-wrap items-start justify-evenly gap-12 md:gap-16">
@@ -274,7 +331,6 @@ const PublicPortfolio = ({ items }) => {
                     </div>
                 </section>
                 
-                {/* Social Links Section */}
                 <SocialLinksSection siteSettings={siteSettings} />
 
             </main>

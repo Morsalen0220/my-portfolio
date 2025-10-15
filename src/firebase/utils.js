@@ -112,7 +112,6 @@ export const saveCollectionItem = async (collectionName, itemData) => {
 // Generic function to delete an item from a collection
 export const deleteCollectionItem = async (collectionName, itemId) => {
     try {
-        // FIX: Firebase Error theke bachanor jonyo itemId check kora holo
         if (!itemId) {
             console.warn(`Attempted to delete item from ${collectionName} without an ID. Operation aborted.`);
             throw new Error("Cannot delete item: ID is missing.");
@@ -151,7 +150,7 @@ export const saveSiteSettings = async (settingsData) => {
 // Specific functions for existing collections (Portfolio items are named 'portfolio_items' for data consistency)
 export const getPortfolioQuery = () => getCollectionQuery('portfolio_items');
 export const savePortfolioItem = (itemData) => saveCollectionItem('portfolio_items', itemData);
-export const deletePortfolioItem = (itemId) => deleteCollectionItem('portfolio_items', itemId);
+export const deletePortfolioItem = async (itemId) => deleteCollectionItem('portfolio_items', itemId);
 
 export const getSectionsQuery = () => getCollectionQuery('sections');
 export const saveSection = async (sectionName) => {
@@ -165,6 +164,10 @@ export const saveSection = async (sectionName) => {
         throw error;
     }
 };
+
+// New functions to update and delete sections
+export const updateSection = (sectionId, newName) => saveCollectionItem('sections', { id: sectionId, name: newName });
+export const deleteSection = (sectionId) => deleteCollectionItem('sections', sectionId);
 
 
 export {

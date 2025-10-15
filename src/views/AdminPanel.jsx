@@ -1,10 +1,11 @@
-// src/views/AdminPanel.jsx (Final Code with Fix)
-import React, { useState, useEffect } from 'react';
+// src/views/AdminPanel.jsx
+
+import React, { useState, useEffect } from 'react'; 
 import { useNavigate } from 'react-router-dom';
-import { onSnapshot, getSectionsQuery, saveSection, deletePortfolioItem, getCollectionQuery, saveCollectionItem, deleteCollectionItem, getSiteSettings, saveSiteSettings } from '../firebase/utils';
+import { onSnapshot, getSectionsQuery, saveSection, deletePortfolioItem, getCollectionQuery, saveCollectionItem, deleteCollectionItem, getSiteSettings, saveSiteSettings, updateSection, deleteSection } from '../firebase/utils';
 import { motion } from 'framer-motion';
 
-// --- Icon List (Must be imported or defined here) ---
+// --- Icon List (Full list for selects) ---
 const availableIcons = [
     'FilmIcon', 'UsersIcon', 'VideoIcon', 'SparklesIcon', 'MicIcon', 'PlayIcon', 'DownloadIcon', 'MailIcon', 'XIcon', 'CameraIcon',
     'EditIcon', 'ScissorsIcon', 'ImageIcon', 'MusicIcon', 'GlobeIcon', 'MonitorIcon', 'CpuIcon', 'PenToolIcon', 'PaletteIcon', 'CodeIcon',
@@ -13,7 +14,130 @@ const availableIcons = [
     'MessageSquareIcon', 'SendIcon', 'FacebookIcon', 'LinkedinIcon', 'WhatsappIcon', 'PhoneIcon', 'SocialIcon'
 ];
 
-// --- Reusable Collection Manager (Compact) ---
+// --- Sub-Component: Input/Textarea Components ---
+const InputGroup = ({ label, name, value, onChange, placeholder, type = 'text' }) => (
+    <div>
+        <label htmlFor={name} className="block text-sm font-medium text-gray-400">{label}</label>
+        <input
+            type={type}
+            name={name}
+            id={name}
+            value={value || ''}
+            onChange={onChange}
+            className="mt-1 block w-full rounded-md bg-gray-700 border-gray-600 text-white shadow-sm p-2 text-sm focus:border-red-500 focus:ring-red-500"
+            placeholder={placeholder}
+        />
+    </div>
+);
+
+const TextAreaGroup = ({ label, name, value, onChange, placeholder }) => (
+    <div className="md:col-span-2">
+        <label htmlFor={name} className="block text-sm font-medium text-gray-400">{label}</label>
+        <textarea
+            name={name}
+            id={name}
+            rows="2"
+            value={value || ''}
+            onChange={onChange}
+            className="mt-1 block w-full rounded-md bg-gray-700 border-gray-600 text-white shadow-sm p-2 text-sm focus:border-red-500 focus:ring-red-500"
+            placeholder={placeholder}
+        />
+    </div>
+);
+
+
+// --- Sub-Component: Manage Sections (with Edit/Delete) ---
+const ManageSections = ({ sections }) => {
+    const [newSectionName, setNewSectionName] = useState('');
+    const [editingSection, setEditingSection] = useState({ id: null, name: '' });
+    const [error, setError] = useState('');
+
+    const handleAddSection = async (e) => {
+        e.preventDefault();
+        if (!newSectionName.trim()) {
+            setError('Section name cannot be empty.');
+            return;
+        }
+        try {
+            await saveSection(newSectionName);
+            setNewSectionName('');
+            setError('');
+        } catch (err) {
+            setError('Failed to add section.');
+            console.error(err);
+        }
+    };
+
+    const handleUpdateSection = async () => {
+        if (!editingSection.id || !editingSection.name.trim()) return;
+        try {
+            await updateSection(editingSection.id, editingSection.name);
+            setEditingSection({ id: null, name: '' }); // Exit editing mode
+        } catch (err) {
+            alert('Failed to update section.');
+        }
+    };
+    
+    const handleDeleteSection = async (sectionId) => {
+        if (window.confirm(`Are you sure you want to delete this category? All portfolio items in this category will need to be reassigned.`)) {
+            try {
+                await deleteSection(sectionId);
+            } catch (err) {
+                alert('Failed to delete section.');
+            }
+        }
+    };
+
+    return (
+        <div className="p-4 rounded-lg bg-gray-800/70 border border-gray-700 space-y-4">
+            <h4 className="text-lg font-semibold text-violet-400">Manage Portfolio Categories</h4>
+            <form onSubmit={handleAddSection} className="flex flex-col sm:flex-row gap-3">
+                <input
+                    type="text"
+                    value={newSectionName}
+                    onChange={(e) => setNewSectionName(e.target.value)}
+                    placeholder="New category name (e.g., Reels)"
+                    className="flex-grow bg-gray-700 text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-red-500"
+                />
+                <button type="submit" className="px-4 py-2 bg-red-600 text-sm rounded-lg hover:bg-red-700 transition font-semibold">Add Category</button>
+            </form>
+            {error && <p className="text-red-400 text-sm mb-2">{error}</p>}
+            
+            <div className="space-y-2 border-t border-gray-700 pt-3">
+                {sections.map(section => (
+                    <div key={section.id} className="flex items-center justify-between bg-gray-700 p-2 rounded-md">
+                        {editingSection.id === section.id ? (
+                            <input
+                                type="text"
+                                value={editingSection.name}
+                                onChange={(e) => setEditingSection({ ...editingSection, name: e.target.value })}
+                                className="bg-gray-600 text-white rounded-md px-2 py-1 text-sm flex-grow"
+                            />
+                        ) : (
+                            <p className="text-sm font-mono text-gray-300">{section.name} (ID: {section.id})</p>
+                        )}
+                        <div className="flex space-x-2">
+                            {editingSection.id === section.id ? (
+                                <>
+                                    <button onClick={handleUpdateSection} className="px-2 py-1 bg-green-600 text-xs rounded-md">Save</button>
+                                    <button onClick={() => setEditingSection({ id: null, name: '' })} className="px-2 py-1 bg-gray-500 text-xs rounded-md">Cancel</button>
+                                </>
+                            ) : (
+                                <>
+                                    <button onClick={() => setEditingSection({ id: section.id, name: section.name })} className="px-2 py-1 bg-blue-600 text-xs rounded-md">Edit</button>
+                                    <button onClick={() => handleDeleteSection(section.id)} className="px-2 py-1 bg-red-600 text-xs rounded-md">Delete</button>
+                                </>
+                            )}
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+};
+
+
+// --- Sub-Component: Reusable Collection Manager ---
 const CollectionManager = ({ title, collectionName, fields, itemDisplayName, setEditingPortfolioItem, items: propItems }) => {
     const [items, setItems] = useState(propItems || []);
     const [editingItem, setEditingItem] = useState(null); 
@@ -27,7 +151,6 @@ const CollectionManager = ({ title, collectionName, fields, itemDisplayName, set
             });
             return () => unsubscribe();
         } else {
-             // For Portfolio items passed via prop
              setItems(propItems);
         }
     }, [collectionName, propItems]);
@@ -50,33 +173,40 @@ const CollectionManager = ({ title, collectionName, fields, itemDisplayName, set
     };
 
     const handleDelete = async (id) => {
-        if (window.confirm(`Are you sure you want to delete this ${itemDisplayName}?`)) {
+        if (!id) {
+            alert(`Cannot delete item: ID is missing.`);
+            return;
+        }
+        if (window.confirm(`Are you sure you want to permanently delete this item: ${id}?`)) {
             try {
-                await deleteCollectionItem(collectionName, id);
+                if (collectionName === 'portfolio_items') { 
+                    await deletePortfolioItem(id); 
+                } else {
+                    await deleteCollectionItem(collectionName, id);
+                }
             } catch (err) {
-                console.error(`Failed to delete ${itemDisplayName}`, err);
                 alert(`Could not delete the ${itemDisplayName}.`);
             }
         }
     };
-
-    const isPortfolio = collectionName === 'portfolio';
+    
+    const isPortfolio = collectionName === 'portfolio_items'; 
+    const visibleItems = items.filter(item => item.id); 
 
     return (
-        <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">
-            <div className="flex justify-between items-center mb-4">
-                <h3 className="text-xl font-semibold">{title}</h3>
+        <div className="bg-gray-800 p-6 rounded-xl border border-gray-700 shadow-xl space-y-4">
+            <div className="flex justify-between items-center border-b border-gray-700 pb-3">
+                <h3 className="text-xl font-bold text-red-500">{title}</h3>
                 <button
                     onClick={() => isPortfolio ? setEditingPortfolioItem({}) : setEditingItem({})}
-                    className="px-4 py-1.5 bg-violet-600 text-sm rounded-md hover:bg-violet-700 transition"
+                    className="px-4 py-1.5 bg-violet-600 text-sm rounded-md hover:bg-violet-700 transition font-semibold shadow-md"
                 >
-                    + Add
+                    + Add New
                 </button>
             </div>
 
-            {/* Item Edit/Add Form - Only visible if editingItem is locally managed */}
             {editingItem && !isPortfolio && (
-                <form onSubmit={handleSave} className="space-y-3 mb-4 p-3 bg-gray-700/50 rounded-lg">
+                <form onSubmit={handleSave} className="space-y-4 mb-4 p-4 bg-gray-700 rounded-lg border border-violet-500/50">
                     <h4 className="text-lg font-semibold">{editingItem.id ? `Edit ${itemDisplayName}` : `Add New ${itemDisplayName}`}</h4>
                     {fields.map(field => (
                         <div key={field.name}>
@@ -85,7 +215,7 @@ const CollectionManager = ({ title, collectionName, fields, itemDisplayName, set
                                 <select
                                     value={editingItem[field.name] || ''}
                                     onChange={(e) => setEditingItem({ ...editingItem, [field.name]: e.target.value })}
-                                    className="w-full bg-gray-700 text-white rounded-md px-3 py-1.5 text-sm focus:ring-red-500"
+                                    className="w-full bg-gray-600 text-white rounded-md px-3 py-2 text-sm focus:ring-red-500"
                                     required
                                 >
                                     <option value="" disabled>Select an icon</option>
@@ -99,47 +229,56 @@ const CollectionManager = ({ title, collectionName, fields, itemDisplayName, set
                                     placeholder={field.placeholder}
                                     value={editingItem[field.name] || ''}
                                     onChange={(e) => setEditingItem({ ...editingItem, [field.name]: e.target.value })}
-                                    className="w-full bg-gray-700 text-white rounded-md px-3 py-1.5 text-sm focus:ring-red-500"
+                                    className="w-full bg-gray-600 text-white rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-red-500"
                                     required
                                 />
                             )}
                         </div>
                     ))}
                     <div className="flex gap-3 pt-1">
-                        <button type="submit" className="px-4 py-1 bg-blue-600 text-sm rounded-md hover:bg-blue-700 transition">Save</button>
-                        <button type="button" onClick={() => setEditingItem(null)} className="px-4 py-1 bg-gray-600 text-sm rounded-md hover:bg-gray-500 transition">Cancel</button>
+                        <button type="submit" className="px-6 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition">Save Item</button>
+                        <button type="button" onClick={() => setEditingItem(null)} className="px-6 py-2 bg-gray-600 text-white font-semibold rounded-lg hover:bg-gray-700 transition">Cancel</button>
                     </div>
                 </form>
             )}
 
-            {/* Item List (Shorter view: max-h-48) */}
-            <div className="space-y-2 overflow-y-auto max-h-48 pt-2">
-                {items.map((item, index) => (
-                    <div key={item.id || `item-${index}`} className="flex items-center justify-between bg-gray-700/70 p-3 rounded-md">
-                        <p className="font-semibold text-sm truncate">{item.title || item.name || item.label}</p>
-                        <div className="flex space-x-2 flex-shrink-0">
-                            <button onClick={() => isPortfolio ? setEditingPortfolioItem(item) : setEditingItem(item)} className="px-3 py-0.5 bg-blue-600 rounded-md hover:bg-blue-700 transition text-xs">Edit</button>
-                            {/* FIX: item.id check kora holo delete korar age */}
-                            <button 
-                                onClick={() => item.id && (isPortfolio ? deletePortfolioItem(item.id) : handleDelete(item.id))} 
-                                className="px-3 py-0.5 bg-red-600 rounded-md hover:bg-red-700 transition text-xs"
-                            >
-                                Delete
-                            </button>
-                        </div>
-                    </div>
-                ))}
+            <div className="space-y-3 overflow-y-auto max-h-72">
+                {visibleItems.length > 0 ? (
+                    visibleItems.map((item) => (
+                        <motion.div 
+                            key={item.id} 
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="flex items-center justify-between bg-gray-700/70 p-3 rounded-md border border-gray-700 hover:border-violet-500 transition-colors"
+                        >
+                            <div className="flex-grow min-w-0">
+                                <p className="font-semibold text-sm truncate text-white">{item.title || item.name || item.label || 'Unnamed Item'}</p>
+                                {item.sectionId && <p className="text-xs text-gray-400 font-mono">Section ID: {item.sectionId}</p>}
+                            </div>
+                            <div className="flex space-x-2 flex-shrink-0">
+                                <button onClick={() => isPortfolio ? setEditingPortfolioItem(item) : setEditingItem(item)} className="px-3 py-1 bg-blue-600 rounded-md hover:bg-blue-700 transition text-xs font-semibold">Edit</button>
+                                <button 
+                                    onClick={() => handleDelete(item.id)} 
+                                    className="px-3 py-1 bg-red-600 rounded-md hover:bg-red-700 transition text-xs font-semibold"
+                                >
+                                    Delete
+                                </button>
+                            </div>
+                        </motion.div>
+                    ))
+                ) : (
+                    <p className="text-gray-500 italic text-sm p-3 text-center">No saved items found. Click '+ Add' to create one.</p>
+                )}
             </div>
         </div>
     );
 };
 
 
-// --- Settings Tab Component ---
+// --- Sub-Component: Settings Tab ---
 const SettingsTab = ({ siteSettings, handleSettingsChange, handleSaveSettings }) => (
-// ... (rest of SettingsTab component)
     <form onSubmit={handleSaveSettings} className="space-y-6">
-        <div className="space-y-4 bg-gray-800/70 p-6 rounded-lg border border-gray-700">
+        <div className="space-y-4 bg-gray-800/70 p-6 rounded-xl border border-gray-700 shadow-lg">
             <h3 className="text-xl font-semibold text-violet-400">General Information</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <InputGroup label="Hero Tagline" name="heroTagline" value={siteSettings.heroTagline} onChange={handleSettingsChange} placeholder="Video Editor & Storyteller" />
@@ -150,7 +289,7 @@ const SettingsTab = ({ siteSettings, handleSettingsChange, handleSaveSettings })
             </div>
         </div>
 
-        <div className="space-y-4 bg-gray-800/70 p-6 rounded-lg border border-gray-700">
+        <div className="space-y-4 bg-gray-800/70 p-6 rounded-xl border border-gray-700 shadow-lg">
             <h3 className="text-xl font-semibold text-violet-400">Social Media & Contact Links</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <InputGroup label="Facebook URL" name="facebookUrl" type="url" value={siteSettings.facebookUrl} onChange={handleSettingsChange} placeholder="https://facebook.com/yourhandle" />
@@ -160,46 +299,33 @@ const SettingsTab = ({ siteSettings, handleSettingsChange, handleSaveSettings })
             </div>
         </div>
 
-        <button type="submit" className="w-full py-3 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-colors shadow-lg">
+        <button type="submit" className="w-full py-3 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-colors shadow-lg mt-6">
             Save All Settings
         </button>
     </form>
 );
 
 
-// --- Data Management Tab Component ---
+// --- Sub-Component: Data Management Tab ---
 const DataManagementTab = ({ items, sections, setEditingPortfolioItem }) => (
-// ... (rest of DataManagementTab component)
     <div className="space-y-6">
-        {/* Manage Sections */}
-        <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">
-            <h3 className="text-xl font-semibold mb-4 text-violet-400">Manage Sections/Categories</h3>
-            <ManageSections sections={sections} />
-        </div>
+        
+        <ManageSections sections={sections} />
 
-        {/* Portfolio Items - Uses CollectionManager but passes setEditingPortfolioItem */}
         <CollectionManager
             title="Portfolio Items (Videos)"
-            collectionName="portfolio"
-            itemDisplayName="title"
+            collectionName="portfolio_items" 
+            itemDisplayName="Video Item"
             items={items}
-            setEditingPortfolioItem={setEditingPortfolioItem} // Passed directly to trigger main ItemForm
-            fields={[
-                { name: 'title', label: 'Title', type: 'text', placeholder: 'Project Title' },
-                { name: 'videoUrl', label: 'Video URL (YT/Drive Embed)', type: 'url', placeholder: 'https://drive.google.com/...' },
-                { name: 'thumbnailUrl', label: 'Thumbnail URL', type: 'url', placeholder: 'https://placehold.co/...' },
-                { name: 'description', label: 'Description', type: 'text', placeholder: 'Short description' },
-                { name: 'tools', label: 'Tools (Comma separated)', type: 'text', placeholder: 'Premiere Pro, After Effects' },
-                { name: 'sectionId', label: 'Section ID', type: 'text', placeholder: 'Section ID from above' },
-            ]}
+            setEditingPortfolioItem={setEditingPortfolioItem} 
+            fields={[]} 
         />
 
-        {/* Other Collections in a Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <CollectionManager
                 title="Stats/Counters"
                 collectionName="stats"
-                itemDisplayName="label"
+                itemDisplayName="Statistic"
                 fields={[
                     { name: 'label', label: 'Label', type: 'text', placeholder: 'e.g., Projects Completed' },
                     { name: 'value', label: 'Value', type: 'text', placeholder: 'e.g., 100+' },
@@ -209,7 +335,7 @@ const DataManagementTab = ({ items, sections, setEditingPortfolioItem }) => (
             <CollectionManager
                 title="Skills (Level 0-100)"
                 collectionName="skills"
-                itemDisplayName="name"
+                itemDisplayName="Skill"
                 fields={[
                     { name: 'name', label: 'Skill Name', type: 'text', placeholder: 'e.g., Adobe Premiere Pro' },
                     { name: 'level', label: 'Level (0-100)', type: 'number', placeholder: 'e.g., 95' }
@@ -218,7 +344,7 @@ const DataManagementTab = ({ items, sections, setEditingPortfolioItem }) => (
             <CollectionManager
                 title="Service Cards"
                 collectionName="services"
-                itemDisplayName="title"
+                itemDisplayName="Service Card"
                 fields={[
                     { name: 'title', label: 'Title', type: 'text', placeholder: 'Social Media Reels' },
                     { name: 'description', label: 'Description', type: 'text', placeholder: 'Short description' },
@@ -228,7 +354,7 @@ const DataManagementTab = ({ items, sections, setEditingPortfolioItem }) => (
             <CollectionManager
                 title="Service List Items"
                 collectionName="service_list"
-                itemDisplayName="name"
+                itemDisplayName="Service List Item"
                 fields={[ { name: 'name', label: 'Service Name', type: 'text', placeholder: 'Video Editing & Post-Production' }, ]}
             />
         </div>
@@ -236,114 +362,21 @@ const DataManagementTab = ({ items, sections, setEditingPortfolioItem }) => (
 );
 
 
-// --- Reusable Input/Textarea Components ---
-const InputGroup = ({ label, name, value, onChange, placeholder, type = 'text' }) => (
-// ... (rest of InputGroup component)
-    <div>
-        <label htmlFor={name} className="block text-sm font-medium text-gray-400">{label}</label>
-        <input
-            type={type}
-            name={name}
-            id={name}
-            value={value || ''}
-            onChange={onChange}
-            className="mt-1 block w-full rounded-md bg-gray-700 border-gray-600 text-white shadow-sm p-2 text-sm focus:border-red-500 focus:ring-red-500"
-            placeholder={placeholder}
-        />
-    </div>
-);
-
-const TextAreaGroup = ({ label, name, value, onChange, placeholder }) => (
-// ... (rest of TextAreaGroup component)
-    <div className="md:col-span-2">
-        <label htmlFor={name} className="block text-sm font-medium text-gray-400">{label}</label>
-        <textarea
-            name={name}
-            id={name}
-            rows="2"
-            value={value || ''}
-            onChange={onChange}
-            className="mt-1 block w-full rounded-md bg-gray-700 border-gray-600 text-white shadow-sm p-2 text-sm focus:border-red-500 focus:ring-red-500"
-            placeholder={placeholder}
-        />
-    </div>
-);
-
-// --- Manage Sections Component (Kept same logic, separate component) ---
-const ManageSections = ({ sections }) => {
-// ... (rest of ManageSections component)
-    const [newSectionName, setNewSectionName] = useState('');
-    const [error, setError] = useState('');
-
-    const handleAddSection = async (e) => {
-        e.preventDefault();
-        if (!newSectionName.trim()) {
-            setError('Section name cannot be empty.');
-            return;
-        }
-        try {
-            await saveSection(newSectionName);
-            setNewSectionName('');
-            setError('');
-        } catch (err) {
-            setError('Failed to add section.');
-            console.error(err);
-        }
-    };
-
-    return (
-        <div className="space-y-4">
-            <form onSubmit={handleAddSection} className="flex flex-col sm:flex-row gap-3">
-                <input
-                    type="text"
-                    value={newSectionName}
-                    onChange={(e) => setNewSectionName(e.target.value)}
-                    placeholder="New section name (e.g., Commercials)"
-                    className="flex-grow bg-gray-700 text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-red-500"
-                />
-                <button type="submit" className="px-4 py-2 bg-red-600 text-sm rounded-lg hover:bg-red-700 transition flex-shrink-0">Add Section</button>
-            </form>
-            {error && <p className="text-red-400 text-sm mb-2">{error}</p>}
-            <h4 className="text-md font-medium text-gray-400">Existing Sections:</h4>
-            <div className="flex flex-wrap gap-2 max-h-20 overflow-y-auto p-1 bg-gray-700 rounded-md">
-                {sections.length > 0 ? sections.map(section => (
-                    <span key={section.id} className="bg-gray-600 text-gray-300 px-3 py-1 rounded-full text-xs">{section.name}</span>
-                )) : (<p className="text-gray-500 italic text-sm">No sections created yet.</p>)}
-            </div>
-        </div>
-    );
-};
-
-
-// --- AdminPanel Main Component ---
-const AdminPanel = ({ items, setEditingItem }) => {
-// ... (rest of AdminPanel component)
-    const [sections, setSections] = useState([]);
+// --- Main Component: AdminPanel ---
+const AdminPanel = ({ items, sections, setEditingItem }) => { 
     const [siteSettings, setSiteSettings] = useState({});
-    const [activeTab, setActiveTab] = useState('settings'); // 'settings' or 'data'
+    const [activeTab, setActiveTab] = useState('data'); // Default to 'data' tab to show all controls
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
 
     useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const q = getSectionsQuery();
-                const unsubscribeSections = onSnapshot(q, (snapshot) => {
-                    const fetchedSections = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).sort((a, b) => a.createdAt?.seconds - b.createdAt?.seconds);
-                    setSections(fetchedSections);
-                });
-                
-                const settings = await getSiteSettings();
-                setSiteSettings(settings);
-                setLoading(false);
-                
-                return () => unsubscribeSections();
-            } catch (err) {
-                console.error("Error loading admin data:", err);
-                setLoading(false);
-            }
+        const fetchSettings = async () => {
+            setLoading(true);
+            const settings = await getSiteSettings();
+            setSiteSettings(settings);
+            setLoading(false);
         };
-        fetchData();
+        fetchSettings();
     }, []);
 
     const handleSettingsChange = (e) => {
@@ -366,15 +399,14 @@ const AdminPanel = ({ items, setEditingItem }) => {
             case 'settings':
                 return <SettingsTab siteSettings={siteSettings} handleSettingsChange={handleSettingsChange} handleSaveSettings={handleSaveSettings} />;
             case 'data':
-                // Assuming 'items' passed to AdminPanel contains all portfolio items
                 return <DataManagementTab items={items} sections={sections} setEditingPortfolioItem={setEditingItem} />;
             default:
                 return null;
         }
     };
 
-    if (loading) {
-        return <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">Loading Admin Panel...</div>;
+    if (loading && activeTab === 'settings') {
+        return <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">Loading Settings...</div>;
     }
 
     return (
@@ -382,21 +414,20 @@ const AdminPanel = ({ items, setEditingItem }) => {
             <div className="max-w-4xl mx-auto pt-6">
                 <div className="flex justify-between items-center mb-6 border-b border-gray-700 pb-4">
                     <h1 className="text-3xl font-bold text-red-500">Admin Dashboard</h1>
-                    <button onClick={() => navigate('/')} className="px-4 py-2 bg-gray-600 rounded-lg hover:bg-gray-700 transition text-sm flex-shrink-0">&larr; View Portfolio</button>
+                    <button onClick={() => navigate('/')} className="px-4 py-2 bg-gray-600 rounded-lg hover:bg-gray-700 transition text-sm flex-shrink-0">← View Portfolio</button>
                 </div>
                 
-                {/* Tab Navigation */}
-                <div className="mb-6">
-                    <nav className="flex space-x-4 border-b border-gray-700">
+                <div className="mb-6 bg-gray-800 rounded-xl shadow-inner">
+                    <nav className="flex space-x-0 border-b border-gray-700">
                         <button 
                             onClick={() => setActiveTab('settings')}
-                            className={`px-4 py-2 text-lg font-medium transition-colors ${activeTab === 'settings' ? 'border-b-2 border-violet-500 text-violet-400' : 'text-gray-400 hover:text-white'}`}
+                            className={`flex-1 py-3 text-lg font-semibold transition-colors rounded-tl-lg ${activeTab === 'settings' ? 'border-b-2 border-violet-500 text-violet-400 bg-gray-700' : 'text-gray-400 hover:text-white hover:bg-gray-700/50'}`}
                         >
-                            <span className="hidden sm:inline">Site </span>Settings
+                            Site Settings
                         </button>
                         <button 
                             onClick={() => setActiveTab('data')}
-                            className={`px-4 py-2 text-lg font-medium transition-colors ${activeTab === 'data' ? 'border-b-2 border-violet-500 text-violet-400' : 'text-gray-400 hover:text-white'}`}
+                            className={`flex-1 py-3 text-lg font-semibold transition-colors rounded-tr-lg ${activeTab === 'data' ? 'border-b-2 border-violet-500 text-violet-400 bg-gray-700' : 'text-gray-400 hover:text-white hover:bg-gray-700/50'}`}
                         >
                             Data Management
                         </button>
@@ -404,7 +435,6 @@ const AdminPanel = ({ items, setEditingItem }) => {
                 </div>
 
                 {renderTabContent()}
-
             </div>
         </div>
     );

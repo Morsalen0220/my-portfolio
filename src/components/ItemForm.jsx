@@ -1,74 +1,56 @@
 import React, { useState, useEffect } from 'react';
-import { savePortfolioItem, getSectionsQuery, onSnapshot } from '../firebase/utils';
+import { savePortfolioItem } from '../firebase/utils';
 
-// --- এখানে `onSave = () => {}` যোগ করা হয়েছে ---
-const ItemForm = ({ item = {}, onSave = () => {}, onCancel }) => {
-    const [formData, setFormData] = useState({
-        title: '',
-        client: '',
-        description: '',
-        videoUrl: '',
-        thumbnailUrl: '',
-        tools: '',
-        duration: '',
-        sectionId: '',
-    });
-    const [sections, setSections] = useState([]);
-    const [error, setError] = useState('');
+// Helper component for inputs with better control over 'required'
+const ItemFormInput = ({ label, name, value, onChange, type = 'text', placeholder = '', required = true }) => (
+    <div>
+        <label className="block text-sm font-medium text-gray-400 mb-1">{label}</label>
+        <input
+            type={type}
+            name={name}
+            value={value || ''}
+            onChange={onChange}
+            placeholder={placeholder}
+            className="w-full bg-gray-700 text-white rounded-md px-3 py-2 text-sm border border-gray-600 focus:ring-2 focus:ring-violet-500"
+            required={required}
+        />
+    </div>
+);
 
-    // 1. Sections fetch করা (component mount-এর সময় একবার)
+// New component for the category dropdown
+const ItemFormSelect = ({ label, name, value, onChange, options, required = true }) => (
+    <div>
+        <label className="block text-sm font-medium text-gray-400 mb-1">{label}</label>
+        <select
+            name={name}
+            value={value || ''}
+            onChange={onChange}
+            className="w-full bg-gray-700 text-white rounded-md px-3 py-2 text-sm border border-gray-600 focus:ring-2 focus:ring-violet-500"
+            required={required}
+        >
+            <option value="" disabled>Select a category</option>
+            {options.map(option => (
+                <option key={option.id} value={option.id}>{option.name}</option>
+            ))}
+        </select>
+    </div>
+);
+
+
+// Main ItemForm Component (New Design)
+const ItemForm = ({ item, sections, onSave, onCancel }) => { 
+    const [formData, setFormData] = useState({});
+    const [loading, setLoading] = useState(false);
+
+    // FIX: useEffect will only run when the 'item' prop changes.
+    // This prevents re-renders from resetting the form data.
     useEffect(() => {
-        const q = getSectionsQuery();
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const fetchedSections = snapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data()
-            })).sort((a, b) => a.createdAt?.seconds - b.createdAt?.seconds);
-            setSections(fetchedSections);
-        });
-        return () => unsubscribe();
-    }, []); 
-
-    // *** Item Prop Initialization and Default Section Setting. ***
-    useEffect(() => {
-        const isNewItem = !item.id;
-        let newSectionId = item.sectionId || '';
-
-        // If it's a new item AND sections are loaded, set the default section ID.
-        if (isNewItem && sections.length > 0 && !newSectionId) {
-            newSectionId = sections[0].id;
+        if (item) {
+            setFormData(item);
+        } else {
+            setFormData({ sectionId: '' }); // Initialize for new items
         }
-
-        // Object creation to compare state without relying on prop reference
-        const initialFormData = {
-            id: item.id || null,
-            title: item.title || '',
-            client: item.client || '',
-            description: item.description || '',
-            videoUrl: item.videoUrl || '',
-            thumbnailUrl: item.thumbnailUrl || '',
-            tools: item.tools || '',
-            duration: item.duration || '',
-            sectionId: newSectionId,
-        };
-
-        setFormData(prevFormData => {
-            
-            const shouldUpdate = 
-                prevFormData.id !== initialFormData.id ||
-                prevFormData.sectionId !== initialFormData.sectionId ||
-                prevFormData.title !== initialFormData.title;
-                
-
-            if (shouldUpdate) {
-                return initialFormData;
-            }
-            
-            return prevFormData; 
-        });
-        
-    }, [item.id, item.sectionId, item.title, sections.length]); 
-
+    }, [item]);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -77,94 +59,102 @@ const ItemForm = ({ item = {}, onSave = () => {}, onCancel }) => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setError('');
-        // Thumbnail URL validation removed in previous step.
-        if (!formData.title || !formData.videoUrl || !formData.sectionId) {
-            setError('Title, Video URL, and Section are required.');
-            return;
-        }
+        setLoading(true);
+
         try {
-            await savePortfolioItem(formData);
+            await savePortfolioItem(formData); 
             onSave();
-        } catch (err) {
-            setError('Failed to save item. Please try again.');
-            console.error(err);
+        } catch (error) {
+            console.error("Error saving portfolio item:", error);
+            alert("Failed to save item. Check console for details.");
+        } finally {
+            setLoading(false);
         }
     };
 
+    const formTitle = formData.id ? "Edit Portfolio Item" : "Add New Portfolio Item";
+
     return (
-        // FIX: Added onClick={onCancel} to the overlay to close the modal when clicking outside,
-        // which helps resolve navigation/click blocking issue if the form is accidentally left open.
-        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4" onClick={onCancel}>
-            <div 
-                className="bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
-                // Prevent modal closure when clicking inside the form content
-                onClick={(e) => e.stopPropagation()} 
-            >
-                <form onSubmit={handleSubmit} className="p-6 sm:p-8 space-y-6">
-                    <h2 className="text-2xl font-bold text-red-500">{item.id ? 'Edit Video Item' : 'Add New Video Item'}</h2>
-                    
-                    {error && <p className="text-red-400 text-sm bg-red-900/50 p-3 rounded-md">{error}</p>}
-
+        <div className="min-h-screen bg-gray-900 text-white p-4 sm:p-6 md:p-8 flex items-start justify-center">
+            <div className="w-full max-w-3xl mt-12 bg-gray-800 p-8 rounded-xl shadow-2xl border border-violet-500/50">
+                <h2 className="text-2xl font-bold mb-6 text-violet-400 border-b border-gray-700 pb-3">{formTitle}</h2>
+                <form onSubmit={handleSubmit} className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {/* Title */}
-                        <div>
-                            <label htmlFor="title" className="block text-sm font-medium text-gray-300 mb-1">Title *</label>
-                            <input type="text" name="title" id="title" value={formData.title} onChange={handleChange} className="w-full bg-gray-700 text-white rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
-                        </div>
+                        <ItemFormInput 
+                            label="Project Title" 
+                            name="title" 
+                            value={formData.title} 
+                            onChange={handleChange} 
+                            placeholder="The Client Project" 
+                            required={true} 
+                        />
+                        
+                        <ItemFormSelect
+                            label="Category"
+                            name="sectionId"
+                            value={formData.sectionId}
+                            onChange={handleChange}
+                            options={sections}
+                            required={true}
+                        />
 
-                        {/* Client */}
-                        <div>
-                            <label htmlFor="client" className="block text-sm font-medium text-gray-300 mb-1">Client</label>
-                            <input type="text" name="client" id="client" value={formData.client} onChange={handleChange} className="w-full bg-gray-700 text-white rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
-                        </div>
+                        <ItemFormInput 
+                            label="Video URL (Embed Link)" 
+                            name="videoUrl" 
+                            value={formData.videoUrl} 
+                            onChange={handleChange} 
+                            type="url" 
+                            placeholder="https://youtube.com/embed/..." 
+                            required={false}
+                        />
+                        <ItemFormInput 
+                            label="Thumbnail URL (Optional)" 
+                            name="thumbnailUrl" 
+                            value={formData.thumbnailUrl} 
+                            onChange={handleChange} 
+                            type="url" 
+                            placeholder="https://placehold.co/..." 
+                            required={false}
+                        />
+                        <ItemFormInput 
+                            label="Tools Used (Optional, comma separated)" 
+                            name="tools" 
+                            value={formData.tools} 
+                            onChange={handleChange} 
+                            placeholder="Premiere Pro, After Effects" 
+                            required={false}
+                        />
                     </div>
 
-                    {/* Description */}
-                    <div>
-                        <label htmlFor="description" className="block text-sm font-medium text-gray-300 mb-1">Description</label>
-                        <textarea name="description" id="description" value={formData.description} onChange={handleChange} rows="3" className="w-full bg-gray-700 text-white rounded-md px-4 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-red-500"></textarea>
+                    <div className="md:col-span-2">
+                        <label className="block text-sm font-medium text-gray-400 mb-1">Description</label>
+                        <textarea
+                            name="description"
+                            rows="4"
+                            value={formData.description || ''}
+                            onChange={handleChange}
+                            placeholder="A brief description of the project and your role."
+                            className="w-full bg-gray-700 text-white rounded-md px-3 py-2 text-sm border border-gray-600 focus:ring-2 focus:ring-violet-500"
+                            required={true}
+                        />
                     </div>
-
-                     {/* Thumbnail URL */}
-                    <div>
-                        <label htmlFor="thumbnailUrl" className="block text-sm font-medium text-gray-300 mb-1">Thumbnail URL (Optional)</label>
-                        <input type="text" name="thumbnailUrl" id="thumbnailUrl" value={formData.thumbnailUrl} onChange={handleChange} placeholder="https://example.com/image.jpg" className="w-full bg-gray-700 text-white rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
-                    </div>
-
-                    {/* Video URL */}
-                    <div>
-                         {/* Change: Updated label to reflect Google Drive support */}
-                        <label htmlFor="videoUrl" className="block text-sm font-medium text-gray-300 mb-1">Video URL (Google Drive or YouTube) *</label>
-                        <input type="text" name="videoUrl" id="videoUrl" value={formData.videoUrl} onChange={handleChange} className="w-full bg-gray-700 text-white rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        {/* Section */}
-                        <div>
-                             <label htmlFor="sectionId" className="block text-sm font-medium text-gray-300 mb-1">Section *</label>
-                             <select name="sectionId" id="sectionId" value={formData.sectionId} onChange={handleChange} className="w-full bg-gray-700 text-white rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
-                                <option value="" disabled>Select a section</option>
-                                {/* FIX: Added index as fallback key */}
-                                {sections.map((sec, index) => <option key={sec.id || index} value={sec.id}>{sec.name}</option>)}
-                             </select>
-                        </div>
-                         {/* Tools */}
-                        <div>
-                             <label htmlFor="tools" className="block text-sm font-medium text-gray-300 mb-1">Tools (comma-separated)</label>
-                             <input type="text" name="tools" id="tools" value={formData.tools} onChange={handleChange} className="w-full bg-gray-700 text-white rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
-                        </div>
-                         {/* Duration */}
-                        <div>
-                             <label htmlFor="duration" className="block text-sm font-medium text-gray-300 mb-1">Duration (e.g., 2:30)</label>
-                             <input type="text" name="duration" id="duration" value={formData.duration} onChange={handleChange} className="w-full bg-gray-700 text-white rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
-                        </div>
-                    </div>
-
-                    {/* Action Buttons */}
-                    <div className="flex justify-end gap-4 pt-4">
-                        <button type="button" onClick={onCancel} className="px-6 py-2 bg-gray-600 rounded-lg hover:bg-gray-500 transition">Cancel</button>
-                        <button type="submit" className="px-6 py-2 bg-red-600 rounded-lg hover:bg-red-700 transition">Save Item</button>
+                    
+                    <div className="flex gap-4 pt-4 border-t border-gray-700">
+                        <button 
+                            type="submit" 
+                            className="px-6 py-2 bg-violet-600 text-white font-semibold rounded-lg hover:bg-violet-700 transition disabled:opacity-50" 
+                            disabled={loading}
+                        >
+                            {loading ? 'Saving...' : formData.id ? 'Update Item' : 'Add New Item'}
+                        </button>
+                        <button 
+                            type="button" 
+                            onClick={onCancel} 
+                            className="px-6 py-2 bg-gray-600 text-white font-semibold rounded-lg hover:bg-gray-700 transition"
+                            disabled={loading}
+                        >
+                            Cancel
+                        </button>
                     </div>
                 </form>
             </div>
