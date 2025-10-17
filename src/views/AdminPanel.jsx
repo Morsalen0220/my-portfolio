@@ -11,7 +11,7 @@ const availableIcons = [
     'EditIcon', 'ScissorsIcon', 'ImageIcon', 'MusicIcon', 'GlobeIcon', 'MonitorIcon', 'CpuIcon', 'PenToolIcon', 'PaletteIcon', 'CodeIcon',
     'ShareIcon', 'StarIcon', 'HeartIcon', 'ClockIcon', 'SettingsIcon', 'CheckCircleIcon', 'FolderIcon', 'LayersIcon', 'BrushIcon',
     'CloudIcon', 'TrendingUpIcon', 'LightbulbIcon', 'BriefcaseIcon', 'FileVideoIcon', 'CameraOffIcon', 'UploadIcon', 'EyeIcon',
-    'MessageSquareIcon', 'SendIcon', 'FacebookIcon', 'LinkedinIcon', 'WhatsappIcon', 'PhoneIcon', 'SocialIcon'
+    'MessageSquareIcon', 'SendIcon', 'FacebookIcon', 'LinkedinIcon', 'WhatsappIcon', 'PhoneIcon', 'SocialIcon', 'PencilAltIcon', 'QuestionMarkCircleIcon', 'HomeIcon', 'ChevronLeftIcon', 'ChevronRightIcon', 'ChevronDownIcon'
 ];
 
 // --- Sub-Component: Input/Textarea Components ---
@@ -36,7 +36,7 @@ const TextAreaGroup = ({ label, name, value, onChange, placeholder }) => (
         <textarea
             name={name}
             id={name}
-            rows="2"
+            rows="3"
             value={value || ''}
             onChange={onChange}
             className="mt-1 block w-full rounded-md bg-gray-700 border-gray-600 text-white shadow-sm p-2 text-sm focus:border-red-500 focus:ring-red-500"
@@ -72,7 +72,7 @@ const ManageSections = ({ sections }) => {
         if (!editingSection.id || !editingSection.name.trim()) return;
         try {
             await updateSection(editingSection.id, editingSection.name);
-            setEditingSection({ id: null, name: '' }); // Exit editing mode
+            setEditingSection({ id: null, name: '' });
         } catch (err) {
             alert('Failed to update section.');
         }
@@ -138,7 +138,7 @@ const ManageSections = ({ sections }) => {
 
 
 // --- Sub-Component: Reusable Collection Manager ---
-const CollectionManager = ({ title, collectionName, fields, itemDisplayName, setEditingPortfolioItem, items: propItems }) => {
+const CollectionManager = ({ title, collectionName, fields, itemDisplayName, setEditingPortfolioItem, items: propItems, allowAdd = true, allowEdit = true }) => {
     const [items, setItems] = useState(propItems || []);
     const [editingItem, setEditingItem] = useState(null); 
 
@@ -147,6 +147,9 @@ const CollectionManager = ({ title, collectionName, fields, itemDisplayName, set
             const q = getCollectionQuery(collectionName);
             const unsubscribe = onSnapshot(q, (snapshot) => {
                 const fetchedItems = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                 if (collectionName === 'reviews') {
+                    fetchedItems.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+                }
                 setItems(fetchedItems);
             });
             return () => unsubscribe();
@@ -179,11 +182,7 @@ const CollectionManager = ({ title, collectionName, fields, itemDisplayName, set
         }
         if (window.confirm(`Are you sure you want to permanently delete this item: ${id}?`)) {
             try {
-                if (collectionName === 'portfolio_items') { 
-                    await deletePortfolioItem(id); 
-                } else {
-                    await deleteCollectionItem(collectionName, id);
-                }
+                await deleteCollectionItem(collectionName, id);
             } catch (err) {
                 alert(`Could not delete the ${itemDisplayName}.`);
             }
@@ -197,12 +196,14 @@ const CollectionManager = ({ title, collectionName, fields, itemDisplayName, set
         <div className="bg-gray-800 p-6 rounded-xl border border-gray-700 shadow-xl space-y-4">
             <div className="flex justify-between items-center border-b border-gray-700 pb-3">
                 <h3 className="text-xl font-bold text-red-500">{title}</h3>
-                <button
-                    onClick={() => isPortfolio ? setEditingPortfolioItem({}) : setEditingItem({})}
-                    className="px-4 py-1.5 bg-violet-600 text-sm rounded-md hover:bg-violet-700 transition font-semibold shadow-md"
-                >
-                    + Add New
-                </button>
+                {allowAdd && (
+                     <button
+                        onClick={() => isPortfolio ? setEditingPortfolioItem({}) : setEditingItem({})}
+                        className="px-4 py-1.5 bg-violet-600 text-sm rounded-md hover:bg-violet-700 transition font-semibold shadow-md"
+                    >
+                        + Add New
+                    </button>
+                )}
             </div>
 
             {editingItem && !isPortfolio && (
@@ -211,7 +212,16 @@ const CollectionManager = ({ title, collectionName, fields, itemDisplayName, set
                     {fields.map(field => (
                         <div key={field.name}>
                             <label className="block text-xs font-medium mb-1 text-gray-400">{field.label}</label>
-                            {field.type === 'select' && field.name === 'icon' ? (
+                            {field.type === 'textarea' ? (
+                                <textarea
+                                    rows="4"
+                                    placeholder={field.placeholder}
+                                    value={editingItem[field.name] || ''}
+                                    onChange={(e) => setEditingItem({ ...editingItem, [field.name]: e.target.value })}
+                                    className="w-full bg-gray-600 text-white rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-red-500"
+                                    required
+                                />
+                            ) : field.type === 'select' && field.name === 'icon' ? (
                                 <select
                                     value={editingItem[field.name] || ''}
                                     onChange={(e) => setEditingItem({ ...editingItem, [field.name]: e.target.value })}
@@ -230,7 +240,7 @@ const CollectionManager = ({ title, collectionName, fields, itemDisplayName, set
                                     value={editingItem[field.name] || ''}
                                     onChange={(e) => setEditingItem({ ...editingItem, [field.name]: e.target.value })}
                                     className="w-full bg-gray-600 text-white rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-red-500"
-                                    required
+                                    required={field.required !== false}
                                 />
                             )}
                         </div>
@@ -252,11 +262,14 @@ const CollectionManager = ({ title, collectionName, fields, itemDisplayName, set
                             className="flex items-center justify-between bg-gray-700/70 p-3 rounded-md border border-gray-700 hover:border-violet-500 transition-colors"
                         >
                             <div className="flex-grow min-w-0">
-                                <p className="font-semibold text-sm truncate text-white">{item.title || item.name || item.label || 'Unnamed Item'}</p>
-                                {item.sectionId && <p className="text-xs text-gray-400 font-mono">Section ID: {item.sectionId}</p>}
+                                <p className="font-semibold text-sm truncate text-white">{item.title || item.name || item.label || item.question || 'Unnamed Item'}</p>
+                                {item.review && <p className="text-xs text-gray-400 font-mono mt-1 truncate">"{item.review}"</p>}
+                                {item.answer && <p className="text-xs text-gray-400 font-mono mt-1 truncate">{item.answer}</p>}
                             </div>
-                            <div className="flex space-x-2 flex-shrink-0">
-                                <button onClick={() => isPortfolio ? setEditingPortfolioItem(item) : setEditingItem(item)} className="px-3 py-1 bg-blue-600 rounded-md hover:bg-blue-700 transition text-xs font-semibold">Edit</button>
+                            <div className="flex space-x-2 flex-shrink-0 ml-2">
+                                {allowEdit && (
+                                     <button onClick={() => isPortfolio ? setEditingPortfolioItem(item) : setEditingItem(item)} className="px-3 py-1 bg-blue-600 rounded-md hover:bg-blue-700 transition text-xs font-semibold">Edit</button>
+                                )}
                                 <button 
                                     onClick={() => handleDelete(item.id)} 
                                     className="px-3 py-1 bg-red-600 rounded-md hover:bg-red-700 transition text-xs font-semibold"
@@ -267,7 +280,7 @@ const CollectionManager = ({ title, collectionName, fields, itemDisplayName, set
                         </motion.div>
                     ))
                 ) : (
-                    <p className="text-gray-500 italic text-sm p-3 text-center">No saved items found. Click '+ Add' to create one.</p>
+                    <p className="text-gray-500 italic text-sm p-3 text-center">No saved items found. {allowAdd ? "Click '+ Add New' to create one." : ""}</p>
                 )}
             </div>
         </div>
@@ -278,24 +291,37 @@ const CollectionManager = ({ title, collectionName, fields, itemDisplayName, set
 // --- Sub-Component: Settings Tab ---
 const SettingsTab = ({ siteSettings, handleSettingsChange, handleSaveSettings }) => (
     <form onSubmit={handleSaveSettings} className="space-y-6">
+        {/* ... SettingsTab code remains the same ... */}
         <div className="space-y-4 bg-gray-800/70 p-6 rounded-xl border border-gray-700 shadow-lg">
-            <h3 className="text-xl font-semibold text-violet-400">General Information</h3>
+            <h3 className="text-xl font-semibold text-violet-400">Hero Section</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <InputGroup label="Hero Tagline" name="heroTagline" value={siteSettings.heroTagline} onChange={handleSettingsChange} placeholder="Video Editor & Storyteller" />
                 <InputGroup label="Hero Title (HTML allowed)" name="heroTitle" value={siteSettings.heroTitle} onChange={handleSettingsChange} placeholder="Crafting Visual <span>Stories</span>" />
                 <TextAreaGroup label="Hero Subtitle" name="heroSubtitle" value={siteSettings.heroSubtitle} onChange={handleSettingsChange} placeholder="I transform raw footage..." />
-                <InputGroup label="Resume URL" name="resumeUrl" type="url" value={siteSettings.resumeUrl} onChange={handleSettingsChange} placeholder="https://drive.google.com/d/..." />
+                <InputGroup label="Resume URL" name="resumeUrl" type="url" value={siteSettings.resumeUrl} onChange={handleSettingsChange} placeholder="https://drive.google.com/..." />
                 <InputGroup label="Hero Image URL" name="heroImageUrl" type="url" value={siteSettings.heroImageUrl} onChange={handleSettingsChange} placeholder="https://placehold.co/..." />
+            </div>
+        </div>
+        
+        <div className="space-y-4 bg-gray-800/70 p-6 rounded-xl border border-gray-700 shadow-lg">
+            <h3 className="text-xl font-semibold text-violet-400">Section Titles</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                 <InputGroup label="Services Title" name="servicesTitle" value={siteSettings.servicesTitle} onChange={handleSettingsChange} placeholder="What I Offer" />
+                 <TextAreaGroup label="Services Subtitle" name="servicesSubtitle" value={siteSettings.servicesSubtitle} onChange={handleSettingsChange} placeholder="High-quality services..." />
+                 <InputGroup label="Skills Title" name="skillsTitle" value={siteSettings.skillsTitle} onChange={handleSettingsChange} placeholder="Technical Expertise" />
+                 <TextAreaGroup label="Skills Subtitle" name="skillsSubtitle" value={siteSettings.skillsSubtitle} onChange={handleSettingsChange} placeholder="Proficient in industry-standard tools..." />
             </div>
         </div>
 
         <div className="space-y-4 bg-gray-800/70 p-6 rounded-xl border border-gray-700 shadow-lg">
-            <h3 className="text-xl font-semibold text-violet-400">Social Media & Contact Links</h3>
+            <h3 className="text-xl font-semibold text-violet-400">Social Media & Footer</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <InputGroup label="Facebook URL" name="facebookUrl" type="url" value={siteSettings.facebookUrl} onChange={handleSettingsChange} placeholder="https://facebook.com/yourhandle" />
                 <InputGroup label="LinkedIn URL" name="linkedinUrl" type="url" value={siteSettings.linkedinUrl} onChange={handleSettingsChange} placeholder="https://linkedin.com/in/yourhandle" />
                 <InputGroup label="WhatsApp Number" name="whatsappNumber" value={siteSettings.whatsappNumber} onChange={handleSettingsChange} placeholder="8801XXXXXXXXX (No +)" />
                 <InputGroup label="Phone Number (Display)" name="phoneNumber" value={siteSettings.phoneNumber} onChange={handleSettingsChange} placeholder="+880 1XXX-XXXXXX" />
+                <InputGroup label="Footer Name" name="footerName" value={siteSettings.footerName} onChange={handleSettingsChange} placeholder="Your Name" />
+                <InputGroup label="Footer Tagline" name="footerTagline" value={siteSettings.footerTagline} onChange={handleSettingsChange} placeholder="Crafted with passion..." />
             </div>
         </div>
 
@@ -318,8 +344,26 @@ const DataManagementTab = ({ items, sections, setEditingPortfolioItem }) => (
             itemDisplayName="Video Item"
             items={items}
             setEditingPortfolioItem={setEditingPortfolioItem} 
-            fields={[]} 
         />
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <CollectionManager
+                title="Manage Reviews"
+                collectionName="reviews"
+                itemDisplayName="Review"
+                allowAdd={false} // FIX: No 'Add New' button
+                allowEdit={false} // FIX: No 'Edit' button
+            />
+            <CollectionManager
+                title="Manage FAQs"
+                collectionName="faqs"
+                itemDisplayName="FAQ"
+                fields={[
+                    { name: 'question', label: 'Question', type: 'text', placeholder: 'e.g., What are the payment terms?' },
+                    { name: 'answer', label: 'Answer', type: 'textarea', placeholder: 'Provide a detailed answer here.' }
+                ]}
+            />
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <CollectionManager
@@ -365,7 +409,7 @@ const DataManagementTab = ({ items, sections, setEditingPortfolioItem }) => (
 // --- Main Component: AdminPanel ---
 const AdminPanel = ({ items, sections, setEditingItem }) => { 
     const [siteSettings, setSiteSettings] = useState({});
-    const [activeTab, setActiveTab] = useState('data'); // Default to 'data' tab to show all controls
+    const [activeTab, setActiveTab] = useState('data');
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
 
@@ -394,6 +438,17 @@ const AdminPanel = ({ items, sections, setEditingItem }) => {
         }
     };
 
+    const TabButton = ({ tabName, label }) => (
+        <button
+            onClick={() => setActiveTab(tabName)}
+            className={`px-4 py-2 text-sm font-semibold rounded-md transition-colors ${
+                activeTab === tabName ? 'bg-red-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+            }`}
+        >
+            {label}
+        </button>
+    );
+
     const renderTabContent = () => {
         switch (activeTab) {
             case 'settings':
@@ -405,16 +460,20 @@ const AdminPanel = ({ items, sections, setEditingItem }) => {
         }
     };
 
-    if (loading && activeTab === 'settings') {
-        return <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">Loading Settings...</div>;
+    if (loading) {
+        return <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">Loading...</div>;
     }
 
     return (
         <div className="min-h-screen bg-gray-900 text-white p-4 sm:p-6 md:p-8">
-            <div className="max-w-4xl mx-auto pt-6">
-                <div className="flex justify-between items-center mb-6 border-b border-gray-700 pb-4">
+            <div className="max-w-6xl mx-auto pt-6">
+                <div className="flex flex-col sm:flex-row justify-between items-center mb-6 border-b border-gray-700 pb-4 gap-4">
                     <h1 className="text-3xl font-bold text-red-500">Admin Dashboard</h1>
-                    <button onClick={() => navigate('/')} className="px-4 py-2 bg-gray-600 rounded-lg hover:bg-gray-700 transition text-sm flex-shrink-0">← View Portfolio</button>
+                    <div className="flex items-center gap-2">
+                        <TabButton tabName="data" label="Manage Data" />
+                        <TabButton tabName="settings" label="Site Settings" />
+                        <button onClick={() => navigate('/')} className="px-4 py-2 bg-gray-600 rounded-md hover:bg-gray-700 transition text-sm flex-shrink-0">← View Site</button>
+                    </div>
                 </div>
 
                 {renderTabContent()}
