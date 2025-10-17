@@ -3,15 +3,15 @@ import { motion, useInView, useMotionValue, useTransform, animate } from 'framer
 import VideoPlayerModal from '../components/VideoPlayerModal';
 import VideoEmbed from '../components/VideoEmbed';
 import { getSectionsQuery, onSnapshot, getSiteSettings, getCollectionQuery } from '../firebase/utils';
-import { 
-    DynamicIcon, 
-    AnimatedCounter, 
-    Card, 
-    Button, 
-    ContactForm, 
+import {
+    DynamicIcon,
+    AnimatedCounter,
+    Card,
+    Button,
+    ContactForm,
     ContactFormModal,
     SocialLinksSection,
-} from '../components/PortfolioHelpers'; 
+} from '../components/PortfolioHelpers';
 
 // --- Sub-Component: Pagination ---
 const Pagination = ({ itemsPerPage, totalItems, paginate, currentPage }) => {
@@ -287,17 +287,24 @@ const PublicPortfolio = ({ items }) => {
                     </div>
                 </section>
 
-                <section id="skills" className="py-20 px-6 bg-gray-800/30">
+                <motion.section 
+                    id="skills" 
+                    className="py-20 px-6 bg-gray-800/30"
+                    initial={{ opacity: 0, y: 50 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.5, delay: 0.2 }}
+                >
                     <div className="max-w-7xl mx-auto">
                         <div className="grid md:grid-cols-2 gap-16 items-center">
-                            <div className="space-y-6 animate-fade-in-up">
+                            <div className="space-y-6">
                                 <h3 className="text-4xl md:text-5xl font-bold">{siteSettings.skillsTitle || "Technical Expertise"}</h3>
                                 <p className="text-gray-400 text-lg leading-relaxed">{siteSettings.skillsSubtitle || "Proficient in industry-standard tools and techniques, with a focus on storytelling, pacing, and visual aesthetics."}</p>
                                 <div className="space-y-4 pt-4">
                                     {skills.map((skill, index) => ( <div key={skill.id || index} className="space-y-2 group"> <div className="flex justify-between text-sm"> <span className="font-medium group-hover:text-violet-400 transition-colors">{skill.name}</span> <span className="text-gray-500 font-mono">{skill.level}%</span> </div> <div className="h-2 bg-gray-700 rounded-full overflow-hidden"> <div className="h-full bg-gradient-to-r from-violet-500 to-red-500 rounded-full transition-all duration-1000 ease-out" style={{ width: `${skill.level}%` }} /> </div> </div> ))}
                                 </div>
                             </div>
-                            <div className="space-y-6 animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
+                            <div className="space-y-6">
                                 <Card className="p-8 bg-gray-800 border-gray-700"><h4 className="text-2xl font-bold mb-6">Service List</h4>
                                     <ul className="space-y-4">
                                         {serviceList.map((service, index) => ( <li key={service.id || index} className="flex items-center gap-3 text-gray-400 group hover:text-white transition-colors"> <div className="w-1.5 h-1.5 bg-violet-500 rounded-full group-hover:scale-150 transition-transform" /> {service.name} </li> ))}
@@ -306,7 +313,7 @@ const PublicPortfolio = ({ items }) => {
                             </div>
                         </div>
                     </div>
-                </section>
+                </motion.section>
                 
                 <section id="stats" className="py-16 px-6 bg-gray-900 border-y border-gray-800">
                     <div className="max-w-7xl mx-auto">
@@ -323,15 +330,29 @@ const PublicPortfolio = ({ items }) => {
                     </div>
                 </section>
 
-                <section id="contact" className="py-20 px-6">
+                <motion.section 
+                    id="contact" 
+                    className="py-20 px-6"
+                    initial={{ opacity: 0, y: 50 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.5, delay: 0.2 }}
+                >
                     <div className="max-w-4xl mx-auto">
                         <div className="text-center mb-12"><h2 className="text-4xl md:text-5xl font-bold text-balance">Let's Create Something <span className="text-violet-500">Amazing</span></h2><p className="text-xl text-gray-400 text-pretty mt-4">Available for freelance projects. Let's bring your vision to life.</p></div>
                         <div className="hidden md:block bg-gray-800/50 p-8 rounded-lg"><ContactForm /></div>
                         <div className="md:hidden text-center"><Button size="lg" className="gap-2 group !bg-red-600 hover:!bg-red-700" onClick={() => setContactFormOpen(true)}><DynamicIcon name="MailIcon"/> Get in Touch</Button></div>
                     </div>
-                </section>
+                </motion.section>
                 
-                <SocialLinksSection siteSettings={siteSettings} />
+                <motion.div
+                    initial={{ opacity: 0, y: 50 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.5, delay: 0.2 }}
+                >
+                    <SocialLinksSection siteSettings={siteSettings} />
+                </motion.div>
 
             </main>
 

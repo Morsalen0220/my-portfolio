@@ -1,6 +1,6 @@
 // src/views/AdminPanel.jsx
 
-import React, { useState, useEffect } from 'react'; 
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { onSnapshot, getSectionsQuery, saveSection, deletePortfolioItem, getCollectionQuery, saveCollectionItem, deleteCollectionItem, getSiteSettings, saveSiteSettings, updateSection, deleteSection } from '../firebase/utils';
 import { motion } from 'framer-motion';
@@ -415,23 +415,6 @@ const AdminPanel = ({ items, sections, setEditingItem }) => {
                 <div className="flex justify-between items-center mb-6 border-b border-gray-700 pb-4">
                     <h1 className="text-3xl font-bold text-red-500">Admin Dashboard</h1>
                     <button onClick={() => navigate('/')} className="px-4 py-2 bg-gray-600 rounded-lg hover:bg-gray-700 transition text-sm flex-shrink-0">← View Portfolio</button>
-                </div>
-                
-                <div className="mb-6 bg-gray-800 rounded-xl shadow-inner">
-                    <nav className="flex space-x-0 border-b border-gray-700">
-                        <button 
-                            onClick={() => setActiveTab('settings')}
-                            className={`flex-1 py-3 text-lg font-semibold transition-colors rounded-tl-lg ${activeTab === 'settings' ? 'border-b-2 border-violet-500 text-violet-400 bg-gray-700' : 'text-gray-400 hover:text-white hover:bg-gray-700/50'}`}
-                        >
-                            Site Settings
-                        </button>
-                        <button 
-                            onClick={() => setActiveTab('data')}
-                            className={`flex-1 py-3 text-lg font-semibold transition-colors rounded-tr-lg ${activeTab === 'data' ? 'border-b-2 border-violet-500 text-violet-400 bg-gray-700' : 'text-gray-400 hover:text-white hover:bg-gray-700/50'}`}
-                        >
-                            Data Management
-                        </button>
-                    </nav>
                 </div>
 
                 {renderTabContent()}
