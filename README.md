@@ -4,7 +4,7 @@ Welcome to my video editing portfolio!
 Here I showcase selected works highlighting my skills in storytelling, pacing, and post-production.
 
 ## 🎥 Tools
-Premiere Pro | DaVinci Resolve | After Effects | Audition
+Premiere Pro | After Effects | Audition |  photoshop | illustrator
 
 ## 📁 Projects
 - **Cinematic Reel** – [Watch](#)
