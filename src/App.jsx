@@ -1,81 +1,101 @@
 import React, { useState, useEffect } from 'react';
-import { Routes, Route, useNavigate } from 'react-router-dom';
-
+import { Routes, Route } from 'react-router-dom';
 import PublicPortfolio from './views/PublicPortfolio';
 import AdminPage from './views/AdminPage';
 import LandingAnimation from './components/LandingAnimation';
 import { 
     auth, 
-    db, 
     onAuthStateChanged, 
     onSnapshot, 
     getPortfolioQuery, 
-    IS_ADMIN_USER
+    getSectionsQuery,
+    getCollectionQuery,
+    getSiteSettings,
+    IS_ADMIN_USER 
 } from './firebase/utils';
 
 const App = () => {
+    // Shob data ekhon ek jaygay state hishebe thakbe
     const [items, setItems] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [sections, setSections] = useState([]);
+    const [siteSettings, setSiteSettings] = useState({});
+    const [stats, setStats] = useState([]);
+    const [skills, setSkills] = useState([]);
+    const [servicesData, setServicesData] = useState([]);
+    const [serviceList, setServiceList] = useState([]);
+
     const [showLanding, setShowLanding] = useState(true);
-    const [isAuthReady, setIsAuthReady] = useState(false);
     const [isAdmin, setIsAdmin] = useState(false);
     const [editingItem, setEditingItem] = useState(null);
 
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (user) => {
+        // --- Authentication Check ---
+        const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
             if (user && !user.isAnonymous) {
                 const permanentAdminUID = 'pwOSgNHvG9Yl8NBM28A66O7ONTP2';
-                const isPermanentAdmin = user.uid === permanentAdminUID;
-                setIsAdmin(IS_ADMIN_USER || isPermanentAdmin);
+                setIsAdmin(user.uid === permanentAdminUID || IS_ADMIN_USER);
             } else {
                 setIsAdmin(false);
             }
-            setIsAuthReady(true);
-            
-            if (!showLanding) {
-                setLoading(false);
-            }
-        });
-        return () => unsubscribe();
-    }, [showLanding]);
-
-    useEffect(() => {
-        if (!db) return;
-
-        const q = getPortfolioQuery();
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const fetchedItems = snapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data()
-            }));
-            setItems(fetchedItems);
-        }, (error) => {
-            console.error("Error fetching portfolio items.", error);
         });
 
-        return () => unsubscribe();
+        // --- Shob Data Ek Shonge Fetch Kora ---
+        const fetchAllData = async () => {
+            const settings = await getSiteSettings();
+            setSiteSettings(settings);
+        };
+        fetchAllData();
+
+        const portfolioUnsub = onSnapshot(getPortfolioQuery(), (snapshot) => {
+            setItems(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        });
+        const sectionsUnsub = onSnapshot(getSectionsQuery(), (snapshot) => {
+            setSections(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        });
+        const statsUnsub = onSnapshot(getCollectionQuery('stats'), (snapshot) => {
+            setStats(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        });
+        const skillsUnsub = onSnapshot(getCollectionQuery('skills'), (snapshot) => {
+            setSkills(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).sort((a, b) => b.level - a.level));
+        });
+        const servicesUnsub = onSnapshot(getCollectionQuery('services'), (snapshot) => {
+            setServicesData(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        });
+        const serviceListUnsub = onSnapshot(getCollectionQuery('service_list'), (snapshot) => {
+            setServiceList(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        });
+
+        // Cleanup function
+        return () => {
+            unsubscribeAuth();
+            portfolioUnsub();
+            sectionsUnsub();
+            statsUnsub();
+            skillsUnsub();
+            servicesUnsub();
+            serviceListUnsub();
+        };
     }, []);
 
     if (showLanding) {
-        return <LandingAnimation onAnimationComplete={() => {
-            setShowLanding(false);
-            setLoading(false);
-        }} />;
-    }
-
-    if (!isAuthReady) {
-        return (
-            <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-                <div className="text-white text-xl">Loading Application...</div>
-            </div>
-        );
+        return <LandingAnimation onAnimationComplete={() => setShowLanding(false)} />;
     }
 
     return (
         <Routes>
             <Route 
                 path="/" 
-                element={<PublicPortfolio items={items} />} 
+                element={
+                    <PublicPortfolio 
+                        items={items}
+                        sections={sections}
+                        siteSettings={siteSettings}
+                        stats={stats}
+                        skills={skills}
+                        servicesData={servicesData}
+                        serviceList={serviceList}
+                    />
+                } 
             />
             <Route 
                 path="/admin" 
@@ -83,6 +103,7 @@ const App = () => {
                     <AdminPage 
                         isAdmin={isAdmin} 
                         items={items}
+                        sections={sections} // Pass sections to AdminPage as well
                         editingItem={editingItem}
                         setEditingItem={setEditingItem}
                     />
