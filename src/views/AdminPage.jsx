@@ -67,7 +67,7 @@ const AdminNav = () => {
     };
     
     return (
-        <nav className="fixed bottom-4 md:top-4 left-1/2 -translate-x-1/2 z-50">
+        <nav className="fixed md:top-4 left-1/2 -translate-x-1/2 z-50">
             <div className="flex items-center gap-2 bg-black/40 backdrop-blur-md border border-white/10 rounded-full p-2 shadow-2xl">
                 <Link to="/" className="flex items-center justify-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 text-gray-300 hover:bg-white/10 hover:text-white">
                     <DynamicIcon name="MonitorIcon" className="h-5 w-5"/>
