@@ -19,6 +19,18 @@ import {
     SocialLinksSection,
 } from '../components/PortfolioHelpers';
 
+// --- Skeleton Card for Loading State ---
+const SkeletonCard = () => (
+    <div className="bg-gray-800/50 rounded-lg overflow-hidden animate-pulse">
+        <div className="aspect-video bg-gray-700" />
+        <div className="p-6">
+            <div className="h-5 bg-gray-700 rounded w-3/4 mb-4" />
+            <div className="h-3 bg-gray-700 rounded w-full mb-2" />
+            <div className="h-3 bg-gray-700 rounded w-5/6" />
+        </div>
+    </div>
+);
+
 // --- Sub-Component: Pagination ---
 const Pagination = ({ itemsPerPage, totalItems, paginate, currentPage }) => {
     const pageNumbers = [];
@@ -184,6 +196,10 @@ const PublicPortfolio = ({ items, sections: propSections, siteSettings: propSite
     const [faqs, setFaqs] = useState([]);
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(6);
+    const [isLoading, setIsLoading] = useState(true);
+    // --- NEW: Loading state for hero image ---
+    const [isHeroImageLoaded, setHeroImageLoaded] = useState(false);
+
 
     useEffect(() => {
         const handleResize = () => setItemsPerPage(window.innerWidth < 768 ? 5 : 6);
@@ -201,6 +217,10 @@ const PublicPortfolio = ({ items, sections: propSections, siteSettings: propSite
         setSkills(propSkills);
         setServicesData(propServicesData);
         setServiceList(propServiceList);
+        
+        if (items && items.length > 0) {
+            setIsLoading(false);
+        }
 
         const unsubscribeReviews = onSnapshot(getCollectionQuery('reviews'), (snapshot) => {
             const fetchedData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -215,7 +235,7 @@ const PublicPortfolio = ({ items, sections: propSections, siteSettings: propSite
             unsubscribeReviews();
             unsubscribeFaqs();
         };
-    }, [propSections, propSiteSettings, propStats, propSkills, propServicesData, propServiceList]);
+    }, [propSections, propSiteSettings, propStats, propSkills, propServicesData, propServiceList, items]);
 
     const handleReviewSubmit = async (reviewData) => {
         try { await saveCollectionItem('reviews', reviewData); } 
@@ -242,7 +262,6 @@ const PublicPortfolio = ({ items, sections: propSections, siteSettings: propSite
         return activeSection === section ? `${baseClass} bg-violet-600 text-white shadow-lg` : `${baseClass} text-gray-300 hover:bg-white/10 hover:text-white`;
     };
 
-    // FIX: Removed 'Reviews' and 'FAQ' from navLinks
     const navLinks = [
         { id: 'hero', label: 'Home', icon: <DynamicIcon name="HomeIcon" /> },
         { id: 'work', label: 'Work', icon: <DynamicIcon name="MonitorIcon" /> },
@@ -279,10 +298,23 @@ const PublicPortfolio = ({ items, sections: propSections, siteSettings: propSite
                                     <a href={siteSettings.resumeUrl || "/resume.pdf"} download><Button size="lg" variant="outline" className="gap-2 group bg-transparent border-gray-600 hover:bg-gray-800"><DynamicIcon name="DownloadIcon" className="group-hover:translate-y-0.5 transition-transform" /> Download Resume</Button></a>
                                 </div>
                             </div>
+                            {/* --- UPDATED: Hero Image with Skeleton Loader --- */}
                             <div className="relative animate-fade-in-up hidden md:block" style={{ animationDelay: "0.2s" }}>
                                 <div className="aspect-video rounded-lg overflow-hidden bg-gray-800 border border-gray-700 shadow-2xl relative group">
-                                     <img src={siteSettings.heroImageUrl || "https://placehold.co/1280x720/111827/7c3aed?text=Showreel"} alt="Video editing workspace" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
-                                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center"><div className="w-20 h-20 rounded-full bg-violet-600/90 flex items-center justify-center backdrop-blur-sm"><DynamicIcon name="PlayIcon" className="text-white ml-1 w-8 h-8"/></div></div>
+                                     {!isHeroImageLoaded && (
+                                        <div className="absolute inset-0 bg-gray-700 animate-pulse" />
+                                     )}
+                                     <img 
+                                        src={siteSettings.heroImageUrl || "https://placehold.co/1280x720/111827/7c3aed?text=Showreel"} 
+                                        alt="Video editing workspace" 
+                                        className={`w-full h-full object-cover transition-opacity duration-700 group-hover:scale-105 ${isHeroImageLoaded ? 'opacity-100' : 'opacity-0'}`}
+                                        onLoad={() => setHeroImageLoaded(true)}
+                                    />
+                                     <div className={`absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center ${isHeroImageLoaded ? 'block' : 'hidden'}`}>
+                                        <div className="w-20 h-20 rounded-full bg-violet-600/90 flex items-center justify-center backdrop-blur-sm">
+                                            <DynamicIcon name="PlayIcon" className="text-white ml-1 w-8 h-8"/>
+                                        </div>
+                                     </div>
                                 </div>
                             </div>
                         </div>
@@ -293,8 +325,44 @@ const PublicPortfolio = ({ items, sections: propSections, siteSettings: propSite
                     <div className="max-w-7xl mx-auto">
                         <div className="mb-12 text-center"><h3 className="text-4xl md:text-5xl font-bold mb-4">Featured Work</h3><p className="text-gray-400 text-lg max-w-2xl mx-auto">A selection of recent projects showcasing diverse editing styles.</p></div>
                         <div className="flex flex-wrap justify-center gap-3 mb-12">{filterOptions.map((filter) => ( <button key={filter.id} onClick={() => setActiveFilter(filter.id)} className={`px-6 py-2 rounded-full text-sm font-medium transition-all duration-300 ${ activeFilter === filter.id ? "bg-violet-600 text-white shadow-lg" : "bg-gray-800 text-gray-400 hover:bg-gray-700" }`}>{filter.name}</button> ))}</div>
-                        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">{currentItems.map((item, index) => ( <Card key={item.id} onClick={() => setSelectedVideo(item)} style={{ animationDelay: `${index * 0.1}s` }}><div className="relative aspect-video overflow-hidden">{item.thumbnailUrl ? <img src={item.thumbnailUrl} alt={item.title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" /> : item.videoUrl ? <VideoEmbed url={item.videoUrl} isModal={false} /> : <div className="w-full h-full bg-black flex items-center justify-center font-mono text-gray-500">{item.title}</div> }<div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex flex-col justify-end p-6"><div className="flex items-center gap-2 text-white"><div className="w-12 h-12 rounded-full bg-violet-600/90 flex items-center justify-center backdrop-blur-sm"><DynamicIcon name="PlayIcon" className="ml-0.5" /></div><span className="font-mono text-sm">{item.duration || '0:00'}</span></div></div></div><div className="p-6 space-y-3"><h4 className="text-xl font-bold group-hover:text-violet-400 transition-colors">{item.title}</h4><p className="text-gray-400 text-sm leading-relaxed">{item.description || 'No description available.'}</p><div className="flex flex-wrap gap-2 pt-2">{item.tools && item.tools.split(',').map((tool, tagIndex) => ( <span key={tool.trim() || tagIndex} className="px-3 py-1 bg-gray-700 text-gray-300 rounded-full text-xs">{tool.trim()}</span> ))}</div></div></Card>))}</div>
-                        <Pagination itemsPerPage={itemsPerPage} totalItems={filteredItems.length} paginate={paginate} currentPage={currentPage} />
+                        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                            {isLoading ? (
+                                Array.from({ length: itemsPerPage }).map((_, index) => <SkeletonCard key={index} />)
+                            ) : (
+                                currentItems.map((item, index) => (
+                                    <motion.div
+                                        key={item.id}
+                                        initial={{ opacity: 0, y: 20 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ duration: 0.5, delay: index * 0.1 }}
+                                    >
+                                        <Card onClick={() => setSelectedVideo(item)}>
+                                            <div className="relative aspect-video overflow-hidden">
+                                                {item.thumbnailUrl ? <img src={item.thumbnailUrl} alt={item.title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" /> : item.videoUrl ? <VideoEmbed url={item.videoUrl} isModal={false} /> : <div className="w-full h-full bg-black flex items-center justify-center font-mono text-gray-500">{item.title}</div> }
+                                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex flex-col justify-end p-6">
+                                                    <div className="flex items-center gap-2 text-white">
+                                                        <div className="w-12 h-12 rounded-full bg-violet-600/90 flex items-center justify-center backdrop-blur-sm">
+                                                            <DynamicIcon name="PlayIcon" className="ml-0.5" />
+                                                        </div>
+                                                        <span className="font-mono text-sm">{item.duration || '0:00'}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="p-6 space-y-3">
+                                                <h4 className="text-xl font-bold group-hover:text-violet-400 transition-colors">{item.title}</h4>
+                                                <p className="text-gray-400 text-sm leading-relaxed">{item.description || 'No description available.'}</p>
+                                                <div className="flex flex-wrap gap-2 pt-2">
+                                                    {item.tools && item.tools.split(',').map((tool, tagIndex) => (
+                                                        <span key={tool.trim() || tagIndex} className="px-3 py-1 bg-gray-700 text-gray-300 rounded-full text-xs">{tool.trim()}</span>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </Card>
+                                    </motion.div>
+                                ))
+                            )}
+                        </div>
+                        {!isLoading && <Pagination itemsPerPage={itemsPerPage} totalItems={filteredItems.length} paginate={paginate} currentPage={currentPage} />}
                     </div>
                 </section>
                 
@@ -311,7 +379,6 @@ const PublicPortfolio = ({ items, sections: propSections, siteSettings: propSite
                 
                 <section id="stats" className="py-16 px-6 bg-gray-900 border-y border-gray-800"><div className="max-w-7xl mx-auto"><div className="flex flex-row flex-wrap items-start justify-evenly gap-12 md:gap-16">{stats.map((stat) => ( <AnimatedCounter key={stat.id} value={stat.value} label={stat.label} icon={stat.icon} /> ))}</div></div></section>
                 
-                {/* FIX: Added motion.section wrapper for animation */}
                 <motion.section id="reviews" className="py-20 px-6" initial={{ opacity: 0, y: 50 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5, delay: 0.2 }}>
                     <div className="max-w-6xl mx-auto">
                         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 mb-12">
@@ -324,7 +391,6 @@ const PublicPortfolio = ({ items, sections: propSections, siteSettings: propSite
                 
                 <div className="h-px bg-gray-800 max-w-7xl mx-auto" />
 
-                {/* FIX: Added motion.section wrapper for animation */}
                 <motion.section id="faq" className="py-20 px-6" initial={{ opacity: 0, y: 50 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5, delay: 0.2 }}>
                     <div className="max-w-4xl mx-auto">
                         <div className="text-center mb-12 flex flex-col items-center">
